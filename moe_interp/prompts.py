@@ -73,7 +73,10 @@ def char_span_to_token_span(offsets: list[tuple[int, int]], char_start: int, cha
     if not idx:
         return None
     first, last = idx[0], idx[-1]
-    if idx != list(range(first, last + 1)):
+    # Tokens between first and last that don't overlap must be zero-width (e.g. Mellum's standalone "Ġ" before
+    # digits gets offsets (n, n) with trim_offsets); they belong to the span. Anything else means bad offsets.
+    gaps = [i for i in range(first, last + 1) if i not in set(idx)]
+    if any(offsets[i][1] > offsets[i][0] for i in gaps):
         raise PromptRenderError("Non-contiguous token span; offset mapping looks malformed")
     exact = offsets[first][0] == char_start and offsets[last][1] == char_end
     return TokenSpan(first, last + 1, char_start, char_end, exact)
@@ -84,11 +87,13 @@ def render_prompt(
     messages: list[dict[str, str]],
     add_generation_prompt: bool = True,
     char_spans: dict[str, CharSpan] | None = None,
+    chat_template_kwargs: dict[str, Any] | None = None,
 ) -> RenderedPrompt:
     """Render and tokenize one conversation. See the module docstring for the guarantees."""
     if getattr(tokenizer, "chat_template", None) is None:
         raise PromptRenderError("Tokenizer has no chat_template; refusing to guess a prompt format")
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt)
+    tkw = dict(chat_template_kwargs or {})
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=add_generation_prompt, **tkw)
     if not isinstance(text, str):
         raise PromptRenderError(f"apply_chat_template(tokenize=False) returned {type(text).__name__}, expected str")
 
@@ -98,7 +103,7 @@ def render_prompt(
     offsets = [tuple(map(int, o)) for o in enc["offset_mapping"]] if is_fast else None
 
     reference = _as_id_list(
-        tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=add_generation_prompt)
+        tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=add_generation_prompt, **tkw)
     )
     if reference != input_ids:
         n = next((i for i, (a, b) in enumerate(zip(reference, input_ids)) if a != b), min(len(reference), len(input_ids)))
@@ -117,8 +122,8 @@ def render_prompt(
         if pos == -1:
             raise PromptRenderError(
                 f"Message {i} (role={m['role']!r}) does not appear verbatim in the rendered prompt. The chat template "
-                "probably dropped or rewrote it. OLMoE's template only renders 'system', 'user', and 'assistant' roles, so put "
-                "tool outputs or retrieved documents inside a supported role's content."
+                "probably dropped or rewrote it (OLMoE's template only renders 'system', 'user', and 'assistant' roles; "
+                "Mellum's wraps 'tool' messages). Put tool outputs or retrieved documents inside a supported role's content."
             )
         message_char_spans.append((pos, pos + len(content)))
         cursor = pos + len(content)

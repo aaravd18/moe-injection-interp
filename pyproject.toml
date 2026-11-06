@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "moe-interp"
 version = "0.1.0"
-description = "Inference-only routing and activation tracing for MoE LMs under prompt injection (OLMoE)."
+description = "Inference-only routing and activation tracing for MoE LMs under prompt injection (OLMoE, Mellum)."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

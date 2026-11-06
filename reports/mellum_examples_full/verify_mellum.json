@@ -1,0 +1,154 @@
+{
+  "architecture": {
+    "model_type": "mellum",
+    "num_layers": 28,
+    "num_experts": 64,
+    "top_k": 8,
+    "norm_topk_prob": true,
+    "hidden_size": 2304,
+    "num_attention_heads": 32,
+    "num_key_value_heads": 4,
+    "head_dim": 128,
+    "layer_types": [
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "sliding_attention",
+      "full_attention"
+    ],
+    "sliding_window": 1024,
+    "router_module_class": "MellumTopKRouter",
+    "moe_block_class": "MellumSparseMoeBlock",
+    "attention_class": "MellumAttention",
+    "decoder_layer_class": "MellumDecoderLayer"
+  },
+  "dtype": "torch.bfloat16",
+  "checks": {
+    "num_layers_matches_config": {
+      "value": 28,
+      "passed": true
+    },
+    "num_experts_matches_config": {
+      "value": 64,
+      "passed": true
+    },
+    "top_k_matches_config": {
+      "value": 8,
+      "passed": true
+    },
+    "traced_forward_and_routing_verification": {
+      "value": {
+        "max_abs_err_weights_vs_recomputed": 0.0018743276596069336,
+        "max_abs_err_logits_vs_output_router_logits": 0.0
+      },
+      "passed": true
+    },
+    "routing_source": {
+      "value": "router_module_output",
+      "passed": true
+    },
+    "topk_ids_shape": {
+      "value": [
+        28,
+        20,
+        8
+      ],
+      "passed": true
+    },
+    "router_logits_shape": {
+      "value": [
+        28,
+        20,
+        64
+      ],
+      "passed": true
+    },
+    "topk_weight_sum_range": {
+      "value": [
+        0.997802734375,
+        1.001708984375
+      ],
+      "passed": true
+    },
+    "manual_moe_recompute_rel_err": {
+      "value": 0.004891469350643626,
+      "passed": true
+    },
+    "resid_post_eq_resid_mid_plus_moe_rel_err": {
+      "value": 0.0023220810066110057,
+      "passed": true
+    },
+    "router_input_eq_norm_resid_mid_rel_err": {
+      "value": 0.0,
+      "passed": true
+    },
+    "resid_pre_next_eq_resid_post_rel_err": {
+      "value": 0.0,
+      "passed": true
+    },
+    "resid_pre_eq_output_hidden_states_rel_err": {
+      "value": 0.0,
+      "passed": true
+    },
+    "attn_input_eq_input_layernorm_resid_pre_rel_err": {
+      "value": 0.0,
+      "passed": true
+    },
+    "resid_mid_eq_resid_pre_plus_attn_output_rel_err": {
+      "value": 0.001989834259036516,
+      "passed": true
+    },
+    "attn_output_eq_o_proj_attn_z_rel_err": {
+      "value": 0.0,
+      "passed": true
+    },
+    "attention_pattern_row_sum_max_abs_dev": {
+      "value": 0.003173828125,
+      "passed": true
+    },
+    "attention_pattern_masked_entries_max": {
+      "value": 0.0,
+      "passed": true
+    },
+    "manual_attn_z_from_patterns_rel_err": {
+      "value": 0.0016519012814030173,
+      "passed": true
+    },
+    "generated_tokens": {
+      "value": 8,
+      "passed": true
+    },
+    "first_token_matches_prefill_argmax": {
+      "value": true,
+      "passed": true
+    }
+  },
+  "dispatched_weights_normalized": true,
+  "mean_topk_weight_sum": 1.0000452995300293,
+  "attn_implementation_traced": "eager",
+  "generated_text": "<think>\nWe need to respond with one",
+  "passed": true
+}

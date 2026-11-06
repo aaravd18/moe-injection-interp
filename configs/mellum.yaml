@@ -1,0 +1,66 @@
+# Full-capture config for JetBrains/Mellum2.1-12B-A2.5B-Thinking (needs transformers >= 5.8.1).
+# Architecture (read from the model at load time, listed here for reference): 28 layers, 64 experts, top-8,
+# norm_topk_prob = true (dispatched weights sum to 1), 32 query heads / 4 KV heads (GQA), head_dim 128,
+# hidden 2304, layers alternate 3x sliding-window (1024) + 1x full attention.
+#
+# Captures EVERYTHING for every layer and every prompt token:
+#   routing: top-k ids/weights + full router logits and probs                 [L, S, k] / [L, S, 64]
+#   activations: all 8 types                                                   [S, 2304] ([S, 4096] for attn_z)
+#   attention patterns: every head, every query row, every key                 [32, S, S] per layer
+# Disk per variant ~= S * 1.13 MB (activations, bf16) + S^2 * 1.8 KB (patterns, bf16). 150 tokens ~ 210 MB.
+# bf16 storage is lossless here: the model runs in bf16, so these are exactly the values it computed.
+experiment_name: null
+seed: 0
+
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4   # Hub commit verified 2026-11-05
+  local_path: null
+  device: auto
+  dtype: bfloat16
+  attn_implementation: null    # sdpa for generation; the traced pass switches to eager by itself to get patterns
+  tiny_random: false
+
+prompt:
+  add_generation_prompt: true  # appends "<|im_start|>assistant\n"
+  chat_template_kwargs: {}     # thinking ON (model default). {enable_thinking: false} pre-fills an empty <think></think>
+
+generation:
+  enabled: true
+  max_new_tokens: 2048         # thinking model: the answer comes after a <think>...</think> block
+  do_sample: false
+  temperature: null
+  top_p: null
+  repetition_penalty: null
+
+trace:
+  enabled: true
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types: [resid_pre, attn_input, attn_z, attn_output, resid_mid, router_input, moe_output, resid_post]
+    layers: all
+    positions: all
+    dtype: bfloat16
+  attention:
+    save_patterns: true
+    layers: all
+    query_positions: all
+    dtype: bfloat16
+
+data:
+  path: data/examples.jsonl
+  sample_ids: null
+  task_types: null
+  conditions: null
+  limit: null
+
+analysis:
+  reference: clean
+  control: benign
+  alignment: common_suffix
+  last_n: 8
+  span: null
+  min_aligned_tokens: 1
+  save_pdf: false

@@ -1,4 +1,4 @@
-"""moe_interp: routing and activation tracing for MoE language models (OLMoE) under prompt injection.
+"""moe_interp: routing and activation tracing for MoE language models (OLMoE, Mellum) under prompt injection.
 
 Main entry points:
     moe_interp.dataset.load_dataset         JSONL -> list[Sample]

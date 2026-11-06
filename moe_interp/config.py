@@ -17,7 +17,9 @@ import yaml
 DEFAULT_MODEL_ID = "allenai/OLMoE-1B-7B-0125-Instruct"
 
 # Activation types that the tracer can capture. See tracing.ACTIVATION_SEMANTICS.
-ACTIVATION_TYPES = ("resid_pre", "resid_mid", "router_input", "moe_output", "resid_post")
+ACTIVATION_TYPES = (
+    "resid_pre", "attn_input", "attn_z", "attn_output", "resid_mid", "router_input", "moe_output", "resid_post",
+)
 
 
 @dataclass
@@ -35,14 +37,16 @@ class ModelConfig:
     attn_implementation: str | None = None
     """Passed to ``from_pretrained`` (e.g. ``sdpa``, ``eager``). ``None`` uses the Transformers default."""
     tiny_random: bool = False
-    """DEBUG ONLY: build a tiny randomly initialised OLMoE (real tokenizer) to test the pipeline without the 7B download.
-    Results are meaningless."""
+    """DEBUG ONLY: build a tiny randomly initialised model of the same architecture as ``model_id`` (real tokenizer)
+    to test the pipeline without the full download. Results are meaningless."""
 
 
 @dataclass
 class PromptConfig:
     add_generation_prompt: bool = True
     """Append the assistant turn header (``<|assistant|>\\n`` for OLMoE) after the last message."""
+    chat_template_kwargs: dict[str, Any] = field(default_factory=dict)
+    """Extra keyword arguments for ``apply_chat_template``, e.g. ``{enable_thinking: false}`` for Mellum."""
 
 
 @dataclass
@@ -68,7 +72,8 @@ class RoutingTraceConfig:
 @dataclass
 class ActivationTraceConfig:
     types: list[str] = field(default_factory=lambda: ["resid_mid", "router_input", "moe_output", "resid_post"])
-    """Subset of: resid_pre, resid_mid, router_input, moe_output, resid_post. Use [] to disable."""
+    """Subset of: resid_pre, attn_input, attn_z, attn_output, resid_mid, router_input, moe_output, resid_post.
+    Use [] to disable."""
     layers: list[int] | str = field(default_factory=lambda: [0, 4, 8, 12, -1])
     """Layer indices (negative indices count from the end) or ``"all"``."""
     positions: str | list[int] = "last"
@@ -78,10 +83,25 @@ class ActivationTraceConfig:
 
 
 @dataclass
+class AttentionTraceConfig:
+    save_patterns: bool = False
+    """Save per-head attention patterns softmax(QK^T/sqrt(d) + mask), shape [num_heads, num_query_positions, seq_len]
+    per layer. The traced pass then runs with eager attention (SDPA/flash kernels never materialise the patterns)."""
+    layers: list[int] | str = "all"
+    """Layer indices (negative indices count from the end) or ``"all"``."""
+    query_positions: str | list[int] = "all"
+    """Query rows to keep: ``last``, ``all``, ``last_k:N``, or a list of token indices. All key columns are kept."""
+    dtype: str = "bfloat16"
+    """Storage dtype: float32, float16, or bfloat16. Eager attention casts the fp32 softmax to the model dtype before
+    multiplying by V, so in a bf16 model ``bfloat16`` stores exactly the values that were used."""
+
+
+@dataclass
 class TraceConfig:
     enabled: bool = True
     routing: RoutingTraceConfig = field(default_factory=RoutingTraceConfig)
     activations: ActivationTraceConfig = field(default_factory=ActivationTraceConfig)
+    attention: AttentionTraceConfig = field(default_factory=AttentionTraceConfig)
 
 
 @dataclass
@@ -203,6 +223,13 @@ def validate_config(cfg: ExperimentConfig) -> None:
         raise ConfigError(f"trace.activations.layers must be a list of ints or 'all', got {acts.layers!r}")
     if acts.dtype not in ("float32", "float16", "bfloat16"):
         raise ConfigError(f"trace.activations.dtype must be float32/float16/bfloat16, got {acts.dtype!r}")
+    att = cfg.trace.attention
+    if isinstance(att.layers, str) and att.layers != "all":
+        raise ConfigError(f"trace.attention.layers must be a list of ints or 'all', got {att.layers!r}")
+    if att.dtype not in ("float32", "float16", "bfloat16"):
+        raise ConfigError(f"trace.attention.dtype must be float32/float16/bfloat16, got {att.dtype!r}")
+    if not isinstance(cfg.prompt.chat_template_kwargs, dict):
+        raise ConfigError("prompt.chat_template_kwargs must be a mapping")
     if cfg.model.dtype not in ("auto", "bfloat16", "float16", "float32"):
         raise ConfigError(f"model.dtype must be auto/bfloat16/float16/float32, got {cfg.model.dtype!r}")
     if cfg.generation.max_new_tokens < 1:

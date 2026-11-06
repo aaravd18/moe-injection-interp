@@ -28,7 +28,7 @@ from .env import environment_info
 from .model import LoadedModel, load_model
 from .prompts import RenderedPrompt, render_prompt
 from .storage import append_jsonl, read_jsonl, sha256_file, save_trace, trace_dir, write_json
-from .tracing import ACTIVATION_SEMANTICS, ROUTING_SEMANTICS, TraceSpec, run_traced_forward
+from .tracing import ACTIVATION_SEMANTICS, ATTENTION_SEMANTICS, ROUTING_SEMANTICS, TraceSpec, run_traced_forward
 
 log = logging.getLogger(__name__)
 
@@ -46,13 +46,15 @@ def _sync(device: torch.device) -> None:
         torch.cuda.synchronize(device)
 
 
-def prepare_prompts(samples: list[Sample], tokenizer: Any, add_generation_prompt: bool) -> dict[tuple[str, str], RenderedPrompt]:
+def prepare_prompts(samples: list[Sample], tokenizer: Any, add_generation_prompt: bool,
+                    chat_template_kwargs: dict[str, Any] | None = None) -> dict[tuple[str, str], RenderedPrompt]:
     """Render every selected variant before any model work, so template problems fail fast."""
     out = {}
     for s in samples:
         for cond, v in s.variants.items():
             try:
-                out[(s.id, cond)] = render_prompt(tokenizer, v.messages, add_generation_prompt, v.spans)
+                out[(s.id, cond)] = render_prompt(tokenizer, v.messages, add_generation_prompt, v.spans,
+                                                  chat_template_kwargs)
             except Exception as e:
                 raise type(e)(f"Sample {s.id!r} condition {cond!r} (line {s.line_number}): {e}") from e
     return out
@@ -75,6 +77,31 @@ def _generation_config(model: Any, cfg: ExperimentConfig, tokenizer: Any) -> Any
     if gc.pad_token_id is None:
         gc.pad_token_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
     return gc
+
+
+def split_thinking(text: str) -> tuple[str | None, str]:
+    """Split a reasoning model's response into (thinking, answer) at the last ``</think>``.
+
+    Returns (None, text) if there is no ``</think>``. If generation stopped inside an unclosed ``<think>``, the
+    whole text is thinking and the answer is empty.
+    """
+    if "</think>" in text:
+        thinking, answer = text.rsplit("</think>", 1)
+        return thinking.replace("<think>", "", 1).strip(), answer.strip()
+    if text.lstrip().startswith("<think>"):
+        return text.replace("<think>", "", 1).strip(), ""
+    return None, text
+
+
+def split_response(tokenizer: Any, response_ids: list[int], text: str) -> tuple[str | None, str]:
+    """(thinking, answer). Splits on the ``</think>`` token id when it is a single token (tags may be special
+    tokens that ``skip_special_tokens`` removes), otherwise on the decoded text."""
+    end_id = tokenizer.convert_tokens_to_ids("</think>") if "</think>" in tokenizer.get_vocab() else None
+    if end_id is not None and end_id in response_ids:
+        cut = len(response_ids) - 1 - response_ids[::-1].index(end_id)
+        thinking = tokenizer.decode(response_ids[:cut], skip_special_tokens=True).replace("<think>", "", 1).strip()
+        return thinking, tokenizer.decode(response_ids[cut + 1:], skip_special_tokens=True).strip()
+    return split_thinking(text)
 
 
 def _eos_ids(gc: Any) -> set[int]:
@@ -138,7 +165,7 @@ def run_experiment(
         loaded = load_model(cfg.model, seed=cfg.seed)
     model, tok, layout, device = loaded.model, loaded.tokenizer, loaded.layout, loaded.device
 
-    prompts = prepare_prompts(samples, tok, cfg.prompt.add_generation_prompt)
+    prompts = prepare_prompts(samples, tok, cfg.prompt.add_generation_prompt, cfg.prompt.chat_template_kwargs)
     max_pos = getattr(model.config, "max_position_embeddings", None)
     if max_pos:
         need = max(len(p.input_ids) for p in prompts.values()) + (cfg.generation.max_new_tokens if cfg.generation.enabled else 0)
@@ -159,10 +186,8 @@ def run_experiment(
         "model": loaded.info,
         "environment": environment_info(),
         "generation_config_effective": gc.to_dict(),
-        "trace_spec": {"activation_types": spec.activation_types, "activation_layers": spec.activation_layers,
-                       "positions": spec.positions, "activation_dtype": str(spec.activation_dtype).replace("torch.", ""),
-                       "save_router_logits": spec.save_router_logits, "save_router_probs": spec.save_router_probs},
-        "semantics": {"routing": ROUTING_SEMANTICS, "activations": ACTIVATION_SEMANTICS,
+        "trace_spec": spec.describe(),
+        "semantics": {"routing": ROUTING_SEMANTICS, "activations": ACTIVATION_SEMANTICS, "attention": ATTENTION_SEMANTICS,
                       "note": "Traces come from a separate instrumented prefill pass, not from generation."},
     }
     if resume and (out / "metadata.json").exists():
@@ -209,7 +234,7 @@ def run_experiment(
             td = trace_dir(out, sample.id, cond)
             save_trace(
                 td, sample_id=sample.id, condition=cond, input_ids=rp.input_ids, routing=tr.routing,
-                activations=tr.activations,
+                activations=tr.activations, attention=tr.attention,
                 extra={"prompt_text": rp.text, "spans": record["spans"],
                        "message_token_spans": record["message_token_spans"],
                        "prefill_argmax_token_id": tr.next_token_id},
@@ -227,9 +252,14 @@ def run_experiment(
             _sync(device)
             dt_gen = time.perf_counter() - t0
             resp = gen[0, ids.shape[1]:].tolist()
+            raw = tok.decode(resp, skip_special_tokens=False)
+            text = tok.decode(resp, skip_special_tokens=True)
+            thinking, answer = split_response(tok, resp, text)
             record.update({
-                "response_text": tok.decode(resp, skip_special_tokens=True),
-                "response_text_raw": tok.decode(resp, skip_special_tokens=False),
+                "response_text": text,
+                "response_text_raw": raw,
+                "response_thinking": thinking,
+                "response_answer": answer,
                 "response_ids": resp,
                 "num_generated_tokens": len(resp),
                 "finish_reason": "eos" if resp and resp[-1] in eos else "length",
@@ -242,6 +272,8 @@ def run_experiment(
             if isinstance(target, str) and target:
                 # Naive case-insensitive substring check; a convenience, not an attack-success judge.
                 record["attack_target_in_response"] = target.lower() in record["response_text"].lower()
+                # For reasoning models the thinking may merely *mention* the target; judge the answer separately.
+                record["attack_target_in_answer"] = target.lower() in answer.lower()
         record["timing"] = timing
         if device.type == "cuda":
             record["peak_gpu_memory_gb"] = round(torch.cuda.max_memory_allocated(device) / 1e9, 3)

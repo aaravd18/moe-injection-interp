@@ -1,9 +1,16 @@
 # moe-injection-interp
 
-Inference-only infrastructure for studying how prompt-injection attacks change **expert routing** and
-**hidden-state activations** in a Mixture-of-Experts language model
-([`allenai/OLMoE-1B-7B-0125-Instruct`](https://huggingface.co/allenai/OLMoE-1B-7B-0125-Instruct)), relative
-to clean prompts and benign controls.
+Inference-only infrastructure for studying how prompt-injection attacks change **expert routing**,
+**attention patterns**, and **hidden-state activations** in Mixture-of-Experts language models, relative to clean
+prompts and benign controls. Supported models:
+
+| Model | Config | Layers | Experts / top-k | Attention | `norm_topk_prob` |
+|---|---|---|---|---|---|
+| [`allenai/OLMoE-1B-7B-0125-Instruct`](https://huggingface.co/allenai/OLMoE-1B-7B-0125-Instruct) | [`configs/olmoe.yaml`](configs/olmoe.yaml) | 16 | 64 / 8 | 16 heads, full | false |
+| [`JetBrains/Mellum2.1-12B-A2.5B-Thinking`](https://huggingface.co/JetBrains/Mellum2.1-12B-A2.5B-Thinking) | [`configs/mellum.yaml`](configs/mellum.yaml) | 28 | 64 / 8 | 32 query / 4 KV heads (GQA); 3 sliding-window (1024) : 1 full | true |
+
+Mellum needs `transformers >= 5.8.1`. `configs/mellum.yaml` captures **everything at every layer and every prompt
+token**: routing (ids, weights, logits, probs), all 8 activation types, and per-head attention patterns.
 
 ```
 JSONL of prompt variants ──► run ──► generations.jsonl + per-token routing traces + activations (safetensors)
@@ -47,7 +54,7 @@ git clone <your-repo-url> moe-injection-interp && cd moe-injection-interp
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m moe_interp.cli doctor          # versions, CUDA, disk, HF cache
-python -m pytest                         # 66 CPU tests, no model download
+python -m pytest                         # 77 CPU tests, no model download
 
 # Full pipeline on CPU with a *tiny random* OLMoE + the real tokenizer (≈2 MB download; results meaningless):
 python -m moe_interp.cli run --config configs/debug_tiny.yaml --output results/debug --analyze
@@ -74,6 +81,26 @@ python -m moe_interp.cli run --config configs/olmoe.yaml --data data/examples.js
 ```
 
 Copy results back for CPU analysis with `rsync -av gpu-box:/scratch/$USER/results/smoke_test results/`.
+
+### NVIDIA DGX Spark (Mellum2.1, full capture)
+
+The Spark is aarch64 with CUDA 13 and 128 GB unified memory; Mellum2.1 in bf16 (~24 GB) fits easily. Use the
+PyTorch cu130 wheels (no container needed):
+
+```bash
+python3 -m venv ~/moe-venv && . ~/moe-venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cu130
+pip install -e ".[dev]" "transformers>=5.8.1"
+hf download JetBrains/Mellum2.1-12B-A2.5B-Thinking --revision 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+python -m moe_interp.cli verify --config configs/mellum.yaml          # 21 checks, incl. attention recompute
+nohup python -m moe_interp.cli run --config configs/mellum.yaml --data data/examples.jsonl \
+    --output ~/moe-results/mellum_examples_full --analyze > run.log 2>&1 &
+```
+
+Mellum is a thinking model: responses start with `<think>…</think>`, so `max_new_tokens` defaults to 2048 in its
+config. Each record stores `response_thinking` and `response_answer` separately, and `attack_target_in_answer`
+checks only the final answer (the reasoning may merely *mention* the target). Set
+`prompt.chat_template_kwargs: {enable_thinking: false}` to disable thinking.
 
 ### Google Colab Pro
 
@@ -225,12 +252,36 @@ Per decoder layer ℓ, captured with forward hooks:
 | Type | Definition | Hook |
 |---|---|---|
 | `resid_pre` | residual stream entering layer ℓ (= `output_hidden_states[ℓ]`) | pre-hook on `layers[ℓ]` |
-| `resid_mid` | after attention, **before** the MoE | pre-hook on `post_attention_layernorm` |
+| `attn_input` | `input_layernorm(resid_pre)`, the exact input to q/k/v | pre-hook on `self_attn` |
+| `attn_z` | per-head attention outputs Σ_j A_h[i,j]·v_h[j], concatenated (width `heads × head_dim`; head h = columns `[h·d, (h+1)·d)`) | pre-hook on `self_attn.o_proj` |
+| `attn_output` | `o_proj(attn_z)`, attention block output before the residual add | hook on `self_attn` |
+| `resid_mid` | `resid_pre + attn_output`: after attention, **before** the MoE | pre-hook on `post_attention_layernorm` |
 | `router_input` | `post_attention_layernorm(resid_mid)`, the exact input to the router and the experts | pre-hook on `mlp` |
 | `moe_output` | MoE block output (Σ_j w_j · expert_j), before the residual add | hook on `mlp` |
 | `resid_post` | `resid_mid + moe_output` (= `resid_pre[ℓ+1]`), **after** the MoE | hook on `layers[ℓ]` |
 
-These identities are tested exactly on the tiny model and checked by `verify` on the real model.
+These identities are tested exactly on the tiny models and checked by `verify` on the real models.
+
+### Attention patterns (`trace.attention`)
+
+With `trace.attention.save_patterns: true`, every selected layer stores
+`A = softmax(q kᵀ · scale + mask)` with dims `[head, query_position, key_position]` in
+`attention.safetensors` (`attn_pattern.layer<NNN>`, plus `query_positions`). Query rows follow
+`trace.attention.query_positions` (default `all`); all key columns are always kept.
+
+* SDPA / flash kernels never materialise the pattern, so the **traced pass temporarily switches the model to eager
+  attention** and switches back afterwards (generation keeps the fast kernel). `trace.json` records
+  `attn_implementation: eager`.
+* Eager attention computes the softmax in fp32 and casts it to the model dtype before multiplying by V. Storing as
+  `bfloat16` (the default) therefore keeps exactly the values the bf16 model used.
+* Masked entries are exactly 0: future keys and, on Mellum's `sliding_attention` layers, keys ≥ 1024 positions
+  back. Each layer's `layer_type` is in `trace.json`.
+* GQA: query head h reads KV head `h // (num_heads / num_kv_heads)` (Mellum: 8 query heads per KV head).
+* `verify` recomputes `attn_z` by hand as `A_h @ v_proj(attn_input)` from the stored patterns and requires it to
+  match the captured `attn_z`. This shows the stored patterns are the ones applied to the values.
+* Load with `load_trace(dir).attention[layer]` (or `Experiment.load(record, attention=True)`).
+* Size: `layers × heads × Q × S × 2` bytes. For Mellum with all rows that is ≈ 1.8 KB × S² per variant (40 MB at
+  150 tokens). For long prompts, restrict `query_positions` (e.g. `last_k:32`) or `layers`.
 
 Defaults: `resid_mid, router_input, moe_output, resid_post` at layers `[0, 4, 8, 12, -1]`, **final prompt token
 only**. Set `trace.activations.positions` to `all`, `last_k:N`, or an explicit index list, and `layers: all`, for
@@ -357,11 +408,13 @@ python -m pytest                                            # CPU, ~5 s, no down
 MOE_INTERP_RUN_INTEGRATION=1 python -m pytest tests/integration -v -s   # GPU, real OLMoE
 ```
 
-The CPU suite (66 tests) covers dataset parsing and validation, prompt rendering (including dropped-role
+The CPU suite (77 tests) covers dataset parsing and validation, prompt rendering (including dropped-role
 detection and span → token mapping), alignment, every metric against hand-computed values, safetensors
 round-trips, config validation, and analysis on synthetic traces with known answers. The tracing tests run against
-a **tiny randomly initialized `OlmoeForCausalLM` built from the real Transformers classes**, so the hooks are
-exercised on the real module structure. They check routing semantics, hand recomputation of the MoE output,
+a **tiny randomly initialized `OlmoeForCausalLM` and `MellumForCausalLM` built from the real Transformers classes**
+(the Mellum one has GQA, sliding-window + full layers, and renormalised top-k), so the hooks are exercised on the
+real module structure. `tests/test_mellum_attention.py` covers attention-pattern capture, masks, the eager
+switch-back, attention identities, and storage. They check routing semantics, hand recomputation of the MoE output,
 residual identities, hook removal (including on exceptions), determinism, and the end-to-end run →
 analyze → plot path, including `--resume`.
 
@@ -375,7 +428,13 @@ analyze → plot path, including `--resume`.
 * The complete CLI pipeline (`run --analyze`, `verify`, `plot`) and the analysis notebook, using the real tokenizer
   with a tiny random model.
 
-**Not yet verified, because the 7B model was never loaded** (≈14 GB in bf16 does not fit next to the OS in 16 GB
+**Mellum2.1-12B-A2.5B-Thinking, verified on an NVIDIA DGX Spark (GB10, torch 2.14.1+cu130, transformers 5.22.1,
+bf16):** `verify --config configs/mellum.yaml` passes all 21 checks. The MoE hand recompute has a relative error of
+4.9e-3, the attention-output recompute from stored patterns 1.7e-3, and `resid_pre` vs `output_hidden_states` is
+exactly 0. Masked attention entries are exactly 0, weight sums are 1 ± 2e-3 (bf16), and the first generated token
+matches the prefill.
+
+**OLMoE: not yet verified on real weights, because the 7B model was never loaded** (≈14 GB in bf16 does not fit next to the OS in 16 GB
 of RAM): every behavior on the real weights, including bf16 tolerances in `verify`, the actual generations, GPU
 memory and timing, and first-token agreement under bf16. Run `verify` and the integration suite on the GPU first.
 Every check should pass.
@@ -388,9 +447,10 @@ Every check should pass.
   responses, run `run_traced_forward` on `prompt_ids + response_ids`, which teacher-forces the response through
   the same hooks. That is a small addition and was not built yet.
 * **Batch size 1** by design: no padding, so token positions are unambiguous.
-* **OLMoE-style models only**: discovery expects `model.model.layers[i].{mlp.gate, mlp.experts,
-  post_attention_layernorm}`, and `get_moe_layout` fails loudly otherwise. Other MoE families (Mixtral, Qwen-MoE)
-  have similar layouts but different routers (e.g. shared experts), so they need their own verification.
+* **OLMoE / Mellum layouts only**: discovery expects `model.model.layers[i].{self_attn.o_proj, input_layernorm,
+  mlp.gate, mlp.experts, post_attention_layernorm}` with a sparse MoE in every layer, and `get_moe_layout` fails
+  loudly otherwise. Other MoE families (Mixtral, Qwen-MoE) have similar layouts but different routers (e.g. shared
+  experts), so they need their own verification.
 * **Top-k ties**: in the 4.x path, ids are recomputed on CPU, so an exact tie in router probability could break
   differently than on the GPU. With continuous logits this is practically impossible, and `verify` checks the
   result end to end.

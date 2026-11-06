@@ -77,7 +77,7 @@ options:
                         Load model + tokenizer from this directory instead of the Hub
   --device DEVICE       auto | cuda | cuda:N | mps | cpu
   --dtype {auto,bfloat16,float16,float32}
-  --tiny-random         DEBUG: tiny random OLMoE with the real tokenizer (pipeline test; meaningless
+  --tiny-random         DEBUG: tiny random model of the same architecture, real tokenizer (pipeline test; meaningless
                         results)
   --set KEY=VALUE       Override any config key, e.g. --set trace.activations.positions=all (repeatable)
   --n-tokens N_TOKENS   Number of final prompt tokens to check by hand
@@ -124,7 +124,7 @@ options:
                         Load model + tokenizer from this directory instead of the Hub
   --device DEVICE       auto | cuda | cuda:N | mps | cpu
   --dtype {auto,bfloat16,float16,float32}
-  --tiny-random         DEBUG: tiny random OLMoE with the real tokenizer (pipeline test; meaningless
+  --tiny-random         DEBUG: tiny random model of the same architecture, real tokenizer (pipeline test; meaningless
                         results)
   --set KEY=VALUE       Override any config key, e.g. --set trace.activations.positions=all (repeatable)
   --data DATA           JSONL dataset (overrides data.path)

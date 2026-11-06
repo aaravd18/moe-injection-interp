@@ -54,11 +54,11 @@ def resolve_dtype(dtype: str, device: torch.device) -> torch.dtype:
             ok = torch.cuda.is_bf16_supported()
         if ok:
             return torch.bfloat16
-        log.warning("GPU has no native bf16 support; falling back to float16 (OLMoE was trained in bf16).")
+        log.warning("GPU has no native bf16 support; falling back to float16 (the supported models were trained in bf16).")
         return torch.float16
     if device.type == "mps":
         return torch.bfloat16
-    log.warning("Running on CPU in float32. The full OLMoE-1B-7B needs ~28 GB RAM at fp32 (set model.dtype=bfloat16 for ~14 GB).")
+    log.warning("Running on CPU in float32: a full model needs 4 bytes per parameter (set model.dtype=bfloat16 to halve it).")
     return torch.float32
 
 
@@ -75,16 +75,34 @@ class MoELayout:
     moe_blocks: list[nn.Module]
     routers: list[nn.Module]
     post_attention_norms: list[nn.Module]
+    attentions: list[nn.Module]
+    """``layers[i].self_attn``"""
+    input_norms: list[nn.Module]
+    """``layers[i].input_layernorm`` (its output is the attention input)"""
+    num_heads: int
+    num_kv_heads: int
+    head_dim: int
+    layer_types: list[str] | None = None
+    """Per-layer attention type, e.g. ``sliding_attention`` / ``full_attention`` (Mellum); None if uniform."""
+    sliding_window: int | None = None
+    model_type: str | None = None
 
     def describe(self) -> dict[str, Any]:
         return {
+            "model_type": self.model_type,
             "num_layers": self.num_layers,
             "num_experts": self.num_experts,
             "top_k": self.top_k,
             "norm_topk_prob": self.norm_topk_prob,
             "hidden_size": self.hidden_size,
+            "num_attention_heads": self.num_heads,
+            "num_key_value_heads": self.num_kv_heads,
+            "head_dim": self.head_dim,
+            "layer_types": self.layer_types,
+            "sliding_window": self.sliding_window,
             "router_module_class": type(self.routers[0]).__name__,
             "moe_block_class": type(self.moe_blocks[0]).__name__,
+            "attention_class": type(self.attentions[0]).__name__,
             "decoder_layer_class": type(self.layers[0]).__name__,
         }
 
@@ -92,38 +110,55 @@ class MoELayout:
 def get_moe_layout(model: nn.Module) -> MoELayout:
     """Find the decoder layers, MoE blocks, and routers, and check them against the config.
 
-    Expected (Transformers OLMoE, 4.x and 5.x)::
+    Expected (Transformers OLMoE 4.x/5.x and Mellum 5.x share this layout)::
 
-        model.model.layers[i]                          OlmoeDecoderLayer
+        model.model.layers[i]                          OlmoeDecoderLayer / MellumDecoderLayer
+        model.model.layers[i].input_layernorm          RMSNorm (its output is the attention input)
+        model.model.layers[i].self_attn                attention; returns (output after o_proj, patterns or None)
+        model.model.layers[i].self_attn.o_proj         nn.Linear [num_heads*head_dim -> hidden]
         model.model.layers[i].post_attention_layernorm RMSNorm (its output is the MoE input)
-        model.model.layers[i].mlp                      OlmoeSparseMoeBlock
+        model.model.layers[i].mlp                      OlmoeSparseMoeBlock / MellumSparseMoeBlock
         model.model.layers[i].mlp.gate                 router; weight [num_experts, hidden]
-                                                         4.x: nn.Linear      -> returns logits
-                                                         5.x: OlmoeTopKRouter -> returns (logits, top-k weights, top-k ids)
+                                                         4.x: nn.Linear  -> returns logits
+                                                         5.x: *TopKRouter -> returns (logits, top-k weights, top-k ids)
     """
     cfg = model.config
     base = getattr(model, "model", None)
     layers = getattr(base, "layers", None)
     if layers is None:
         raise ModelStructureError(
-            f"{type(model).__name__} has no .model.layers; this code supports OLMoE-style causal LMs only."
+            f"{type(model).__name__} has no .model.layers; this code supports OLMoE/Mellum-style causal LMs only."
         )
     num_layers = int(cfg.num_hidden_layers)
     num_experts = int(getattr(cfg, "num_experts", getattr(cfg, "num_local_experts", 0)))
     top_k = int(cfg.num_experts_per_tok)
     norm_topk = bool(getattr(cfg, "norm_topk_prob", False))
     hidden = int(cfg.hidden_size)
+    num_heads = int(cfg.num_attention_heads)
+    num_kv_heads = int(getattr(cfg, "num_key_value_heads", None) or num_heads)
+    head_dim = int(getattr(cfg, "head_dim", None) or hidden // num_heads)
+    layer_types = list(cfg.layer_types) if getattr(cfg, "layer_types", None) else None
+    sliding_window = getattr(cfg, "sliding_window", None) if layer_types and "sliding_attention" in layer_types else None
     if len(layers) != num_layers:
         raise ModelStructureError(f"config.num_hidden_layers={num_layers} but model has {len(layers)} layers")
-    blocks, routers, norms = [], [], []
+    blocks, routers, norms, attns, in_norms = [], [], [], [], []
     for i, layer in enumerate(layers):
         mlp = getattr(layer, "mlp", None)
         gate = getattr(mlp, "gate", None)
         norm = getattr(layer, "post_attention_layernorm", None)
-        if mlp is None or gate is None or norm is None:
+        attn = getattr(layer, "self_attn", None)
+        in_norm = getattr(layer, "input_layernorm", None)
+        if mlp is None or gate is None or norm is None or attn is None or in_norm is None:
             raise ModelStructureError(
-                f"Layer {i} lacks mlp / mlp.gate / post_attention_layernorm; not an OLMoE-style MoE layer "
-                f"(got {type(layer).__name__})."
+                f"Layer {i} lacks mlp / mlp.gate / post_attention_layernorm / self_attn / input_layernorm; not an "
+                f"OLMoE-style MoE layer (got {type(layer).__name__}, mlp={type(mlp).__name__}). Dense MLP layers "
+                "are not supported because routing tensors are stacked over all layers."
+            )
+        o_proj = getattr(attn, "o_proj", None)
+        if o_proj is None or tuple(o_proj.weight.shape) != (hidden, num_heads * head_dim):
+            raise ModelStructureError(
+                f"Layer {i} self_attn.o_proj weight has shape "
+                f"{None if o_proj is None else tuple(o_proj.weight.shape)}, expected ({hidden}, {num_heads * head_dim})"
             )
         w = getattr(gate, "weight", None)
         if w is None or tuple(w.shape) != (num_experts, hidden):
@@ -140,7 +175,11 @@ def get_moe_layout(model: nn.Module) -> MoELayout:
         blocks.append(mlp)
         routers.append(gate)
         norms.append(norm)
-    return MoELayout(num_layers, num_experts, top_k, norm_topk, hidden, list(layers), blocks, routers, norms)
+        attns.append(attn)
+        in_norms.append(in_norm)
+    return MoELayout(num_layers, num_experts, top_k, norm_topk, hidden, list(layers), blocks, routers, norms,
+                     attns, in_norms, num_heads, num_kv_heads, head_dim, layer_types, sliding_window,
+                     getattr(cfg, "model_type", None))
 
 
 def load_tokenizer(cfg: ModelConfig) -> Any:
@@ -187,6 +226,64 @@ def build_tiny_random_olmoe(
     return model.eval()
 
 
+def build_tiny_random_mellum(
+    vocab_size: int,
+    *,
+    num_layers: int = 4,
+    num_experts: int = 8,
+    top_k: int = 2,
+    hidden_size: int = 64,
+    num_heads: int = 4,
+    num_kv_heads: int = 2,
+    norm_topk_prob: bool = True,
+    sliding_window: int = 8,
+    pad_token_id: int | None = None,
+    eos_token_id: int | None = None,
+    bos_token_id: int | None = None,
+    seed: int = 0,
+) -> nn.Module:
+    """A tiny randomly initialised MellumForCausalLM (grouped-query attention, alternating sliding-window / full
+    attention layers, renormalised top-k). For tests and CPU dry runs; outputs are meaningless."""
+    from transformers import MellumConfig, MellumForCausalLM
+
+    layer_types = ["full_attention" if (i + 1) % 2 == 0 else "sliding_attention" for i in range(num_layers)]
+    config = MellumConfig(
+        vocab_size=vocab_size,
+        hidden_size=hidden_size,
+        intermediate_size=hidden_size * 2,
+        moe_intermediate_size=hidden_size // 2,
+        num_hidden_layers=num_layers,
+        num_attention_heads=num_heads,
+        num_key_value_heads=num_kv_heads,
+        head_dim=hidden_size // num_heads,
+        num_experts=num_experts,
+        num_experts_per_tok=top_k,
+        norm_topk_prob=norm_topk_prob,
+        layer_types=layer_types,
+        mlp_layer_types=["sparse"] * num_layers,
+        sliding_window=sliding_window,
+        use_sliding_window=True,
+        max_position_embeddings=2048,
+        pad_token_id=pad_token_id,
+        eos_token_id=eos_token_id,
+        bos_token_id=bos_token_id,
+    )
+    torch.manual_seed(seed)
+    return MellumForCausalLM(config).eval()
+
+
+TINY_BUILDERS = {"olmoe": build_tiny_random_olmoe, "mellum": build_tiny_random_mellum}
+
+
+def _model_type(cfg: ModelConfig) -> str:
+    """model_type from the Hub/local config.json (no weights downloaded)."""
+    from transformers import AutoConfig
+
+    src = cfg.local_path or cfg.model_id
+    kwargs = {} if cfg.local_path else {"revision": cfg.revision}
+    return AutoConfig.from_pretrained(src, **kwargs).model_type
+
+
 @dataclass
 class LoadedModel:
     model: nn.Module
@@ -205,8 +302,11 @@ def load_model(cfg: ModelConfig, seed: int = 0) -> LoadedModel:
     dtype = resolve_dtype(cfg.dtype, device)
     tokenizer = load_tokenizer(cfg)
     if cfg.tiny_random:
-        log.warning("model.tiny_random=True: using a TINY RANDOM OLMoE. Results are meaningless (pipeline test only).")
-        model = build_tiny_random_olmoe(
+        model_type = _model_type(cfg)
+        if model_type not in TINY_BUILDERS:
+            raise ModelStructureError(f"No tiny_random builder for model_type={model_type!r}; known: {sorted(TINY_BUILDERS)}")
+        log.warning("model.tiny_random=True: using a TINY RANDOM %s. Results are meaningless (pipeline test only).", model_type)
+        model = TINY_BUILDERS[model_type](
             len(tokenizer), pad_token_id=tokenizer.pad_token_id, eos_token_id=tokenizer.eos_token_id,
             bos_token_id=tokenizer.bos_token_id, seed=seed,
         ).to(device=device, dtype=dtype)

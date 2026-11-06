@@ -1,0 +1,57 @@
+experiment_name: mellum_examples_full
+seed: 0
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+  local_path: null
+  device: auto
+  dtype: bfloat16
+  attn_implementation: null
+  tiny_random: false
+prompt:
+  add_generation_prompt: true
+  chat_template_kwargs: {}
+generation:
+  enabled: true
+  max_new_tokens: 2048
+  do_sample: false
+  temperature: null
+  top_p: null
+  repetition_penalty: null
+trace:
+  enabled: true
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types:
+    - resid_pre
+    - attn_input
+    - attn_z
+    - attn_output
+    - resid_mid
+    - router_input
+    - moe_output
+    - resid_post
+    layers: all
+    positions: all
+    dtype: bfloat16
+  attention:
+    save_patterns: true
+    layers: all
+    query_positions: all
+    dtype: bfloat16
+data:
+  path: data/examples.jsonl
+  sample_ids: null
+  task_types: null
+  conditions: null
+  limit: null
+analysis:
+  reference: clean
+  control: benign
+  alignment: common_suffix
+  last_n: 8
+  span: null
+  min_aligned_tokens: 1
+  save_pdf: false

@@ -1,0 +1,9 @@
+sample_id,reference,condition,ref_len,cond_len,ok,method,n_aligned,reason,a_start,b_start
+task_001,clean,benign,18,29,True,common_suffix,6,,12,23
+task_001,clean,injection,18,28,True,common_suffix,6,,12,22
+task_002,clean,benign,85,102,True,common_suffix,30,,55,72
+task_002,clean,injection,85,103,True,common_suffix,30,,55,73
+task_003,clean,benign,59,67,True,common_suffix,23,,36,44
+task_003,clean,injection,59,72,True,common_suffix,23,,36,49
+task_003,clean,injection_polite,59,76,True,common_suffix,23,,36,53
+task_004,clean,injection,28,39,True,common_suffix,15,,13,24

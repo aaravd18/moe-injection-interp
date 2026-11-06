@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "reference": "clean",
+    "control": "benign",
+    "alignment": "common_suffix",
+    "last_n": 8,
+    "span": null,
+    "min_aligned_tokens": 1
+  },
+  "conditions": [
+    "clean",
+    "benign",
+    "injection",
+    "injection_polite"
+  ],
+  "num_samples": 4,
+  "num_pairs": 8,
+  "num_unaligned_pairs": 0,
+  "warnings": []
+}

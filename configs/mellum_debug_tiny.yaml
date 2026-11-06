@@ -1,0 +1,22 @@
+# CPU pipeline test: the REAL Mellum tokenizer/chat template with a TINY RANDOM Mellum (GQA, sliding + full
+# attention layers, renormalised top-k). Outputs are meaningless. Checks the whole full-capture pipeline on a laptop.
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+  tiny_random: true
+  device: cpu
+  dtype: float32
+generation:
+  max_new_tokens: 8
+trace:
+  routing:
+    save_router_logits: true
+  activations:
+    types: [resid_pre, attn_input, attn_z, attn_output, resid_mid, router_input, moe_output, resid_post]
+    layers: all
+    positions: all
+  attention:
+    save_patterns: true
+    dtype: float32
+data:
+  path: data/examples.jsonl

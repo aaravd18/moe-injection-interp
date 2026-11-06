@@ -10,6 +10,7 @@
           trace.json             metadata: token ids, shapes, dtypes, semantics, spans, checks
           routing.safetensors    topk_ids [L,S,k], topk_weights [L,S,k], optional router_logits/probs [L,S,E]
           activations.safetensors  "<type>.layer<NNN>" -> [P, H], plus "positions" [P]
+          attention.safetensors    "attn_pattern.layer<NNN>" -> [heads, Q, S], plus "query_positions" [Q] (optional)
       metrics/  plots/
 
 Tensors are stored with safetensors (no pickle). Directory names come from
@@ -21,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
@@ -28,7 +30,8 @@ from typing import Any, Iterator
 import torch
 from safetensors.torch import load_file, save_file
 
-from .tracing import ACTIVATION_SEMANTICS, ROUTING_SEMANTICS, ActivationTrace, RoutingTrace
+from .tracing import (ACTIVATION_SEMANTICS, ATTENTION_SEMANTICS, ROUTING_SEMANTICS, ActivationTrace,
+                      AttentionTrace, RoutingTrace)
 
 TRACE_FORMAT_VERSION = 1
 _SAFE = re.compile(r"[^A-Za-z0-9._-]")
@@ -57,6 +60,10 @@ def act_key(kind: str, layer: int) -> str:
     return f"{kind}.layer{layer:03d}"
 
 
+def attn_key(layer: int) -> str:
+    return f"attn_pattern.layer{layer:03d}"
+
+
 def _tensor_meta(t: torch.Tensor, meaning: str, dims: list[str]) -> dict[str, Any]:
     return {"shape": list(t.shape), "dtype": str(t.dtype).replace("torch.", ""), "dims": dims, "meaning": meaning}
 
@@ -69,6 +76,7 @@ def save_trace(
     input_ids: list[int],
     routing: RoutingTrace,
     activations: ActivationTrace | None,
+    attention: AttentionTrace | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     """Write one trace. Returns the directory."""
@@ -118,6 +126,25 @@ def save_trace(
                 for (kind, layer), t in sorted(activations.tensors.items())
             },
         }
+    if attention is not None and attention.patterns:
+        att = {attn_key(layer): t.contiguous() for layer, t in sorted(attention.patterns.items())}
+        att["query_positions"] = torch.tensor(attention.query_positions, dtype=torch.int64)
+        save_file(att, str(d / "attention.safetensors"))
+        meta["attention"] = {
+            "query_positions": list(attention.query_positions),
+            "source_dtype": attention.source_dtype,
+            "attn_implementation": attention.attn_implementation,
+            "num_key_value_heads": attention.num_kv_heads,
+            "sliding_window": attention.sliding_window,
+            "tensors": {
+                attn_key(layer): {
+                    "layer": layer,
+                    "layer_type": attention.layer_types[layer] if attention.layer_types else None,
+                    **_tensor_meta(t, ATTENTION_SEMANTICS["attn_pattern"], ["head", "query_position", "key_position"]),
+                }
+                for layer, t in sorted(attention.patterns.items())
+            },
+        }
     if extra:
         meta.update(extra)
     with (d / "trace.json").open("w") as f:
@@ -140,6 +167,10 @@ class LoadedTrace:
     """Token indices at which activations were captured."""
     activations: dict[tuple[str, int], torch.Tensor]
     """(type, layer) -> [len(positions), H]"""
+    query_positions: list[int] = dataclasses.field(default_factory=list)
+    """Token indices of the attention-pattern query rows."""
+    attention: dict[int, torch.Tensor] = dataclasses.field(default_factory=dict)
+    """layer -> [num_heads, len(query_positions), S] attention patterns (only if loaded)"""
 
     @property
     def spans(self) -> dict[str, dict[str, Any]]:
@@ -160,7 +191,7 @@ class LoadedTrace:
         return sorted({k for (k, _) in self.activations})
 
 
-def load_trace(directory: str | Path, load_activations: bool = True) -> LoadedTrace:
+def load_trace(directory: str | Path, load_activations: bool = True, load_attention: bool = True) -> LoadedTrace:
     d = Path(directory)
     meta_path = d / "trace.json"
     if not meta_path.exists():
@@ -179,13 +210,22 @@ def load_trace(directory: str | Path, load_activations: bool = True) -> LoadedTr
             acts[(info["type"], int(info["layer"]))] = at[key]
         if positions != meta["activations"]["positions"]:
             raise ValueError(f"{d}: positions in activations.safetensors disagree with trace.json")
+    attn: dict[int, torch.Tensor] = {}
+    qpos: list[int] = []
+    if load_attention and (d / "attention.safetensors").exists():
+        att = load_file(str(d / "attention.safetensors"))
+        qpos = att.pop("query_positions").tolist()
+        for key, info in meta["attention"]["tensors"].items():
+            attn[int(info["layer"])] = att[key]
+        if qpos != meta["attention"]["query_positions"]:
+            raise ValueError(f"{d}: query_positions in attention.safetensors disagree with trace.json")
     input_ids = torch.tensor(meta["input_ids"], dtype=torch.int64)
     if rt["topk_ids"].shape[1] != input_ids.shape[0]:
         raise ValueError(f"{d}: routing has {rt['topk_ids'].shape[1]} tokens but input_ids has {input_ids.shape[0]}")
     return LoadedTrace(
         meta=meta, input_ids=input_ids, topk_ids=rt["topk_ids"], topk_weights=rt["topk_weights"],
         router_logits=rt.get("router_logits"), router_probs=rt.get("router_probs"),
-        positions=positions, activations=acts,
+        positions=positions, activations=acts, query_positions=qpos, attention=attn,
     )
 
 

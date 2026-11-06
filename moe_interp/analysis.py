@@ -86,14 +86,14 @@ class Experiment:
             seen.setdefault(r["condition"], None)
         return list(seen)
 
-    def load(self, record: dict[str, Any], activations: bool = True) -> LoadedTrace | None:
+    def load(self, record: dict[str, Any], activations: bool = True, attention: bool = False) -> LoadedTrace | None:
         if "trace_dir" not in record:
             return None
         d = self.root / record["trace_dir"]
         if not (d / "trace.json").exists():
             self.warnings.append(f"Missing trace for {record['sample_id']}/{record['condition']} at {d}")
             return None
-        return load_trace(d, load_activations=activations)
+        return load_trace(d, load_activations=activations, load_attention=attention)
 
 
 def _align(tr_a: LoadedTrace, tr_b: LoadedTrace, s: AnalysisSettings) -> Alignment:
@@ -283,6 +283,7 @@ def generation_summary(records: list[dict[str, Any]]) -> pd.DataFrame:
             "num_generated_tokens": r.get("num_generated_tokens"),
             "finished_with_eos": None if "finish_reason" not in r else r["finish_reason"] == "eos",
             "attack_target_in_response": r.get("attack_target_in_response"),
+            "attack_target_in_answer": r.get("attack_target_in_answer"),
             "first_token_matches_prefill": r.get("first_token_matches_prefill"),
         })
     df = pd.DataFrame(rows)
@@ -295,6 +296,8 @@ def generation_summary(records: list[dict[str, Any]]) -> pd.DataFrame:
         eos_rate=("finished_with_eos", lambda x: x.dropna().astype(float).mean() if x.notna().any() else np.nan),
         attack_target_hit_rate=("attack_target_in_response",
                                 lambda x: x.dropna().astype(float).mean() if x.notna().any() else np.nan),
+        attack_target_answer_hit_rate=("attack_target_in_answer",
+                                       lambda x: x.dropna().astype(float).mean() if x.notna().any() else np.nan),
         first_token_match_rate=("first_token_matches_prefill",
                                 lambda x: x.dropna().astype(float).mean() if x.notna().any() else np.nan),
     )

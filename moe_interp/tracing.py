@@ -27,10 +27,23 @@ Where the values come from:
 In both cases the hooked logits are compared with ``output_router_logits=True``
 (``outputs.router_logits``), which must match.
 
+Attention patterns (optional, ``trace.attention.save_patterns``)::
+
+    A[l] = softmax(q k^T * scale + mask)            [num_heads, num_query_positions, seq_len]
+
+taken from the attention module's own second output, which only the eager attention implementation fills in.
+The traced pass therefore switches the model to eager attention for its duration and restores the previous
+implementation afterwards. Rows sum to 1; masked keys (future tokens, and for sliding-window layers keys more than
+``sliding_window`` positions back) are exactly 0. With grouped-query attention, query head h reads KV head
+``h // (num_heads / num_kv_heads)``.
+
 Activation types (per decoder layer ``l``)::
 
     resid_pre[l]   = input to decoder layer l (residual stream before attention)
-    resid_mid[l]   = resid_pre[l] + attn(...)       (residual stream after attention, before the MoE)
+    attn_input[l]  = input_layernorm(resid_pre[l])  (exact input to q/k/v projections)
+    attn_z[l]      = concat_h(sum_j A_h[i, j] * v_h[j])   (per-head attention outputs before o_proj, [H*d_head])
+    attn_output[l] = o_proj(attn_z[l])              (attention block output, before the residual add)
+    resid_mid[l]   = resid_pre[l] + attn_output[l]  (residual stream after attention, before the MoE)
     router_input[l]= post_attention_layernorm(resid_mid[l])   (exact input to the router and experts)
     moe_output[l]  = sum_j w_j * expert_{id_j}(router_input[l])   (MoE block output, before the residual add)
     resid_post[l]  = resid_mid[l] + moe_output[l]   (decoder layer output = resid_pre[l+1])
@@ -50,6 +63,10 @@ from .model import MoELayout
 
 ACTIVATION_SEMANTICS = {
     "resid_pre": "Residual stream entering the decoder layer (before attention). Equals resid_post of the previous layer.",
+    "attn_input": "input_layernorm(resid_pre): the exact tensor fed to the q/k/v projections.",
+    "attn_z": ("Per-head attention outputs (pattern-weighted sums of values) concatenated over heads, before o_proj. "
+               "Width num_heads*head_dim; head h occupies columns [h*head_dim, (h+1)*head_dim)."),
+    "attn_output": "Output of the attention block (o_proj(attn_z)) before the residual add. resid_mid = resid_pre + attn_output.",
     "resid_mid": "Residual stream after attention, before the MoE block (input to post_attention_layernorm).",
     "router_input": "post_attention_layernorm(resid_mid): the exact tensor fed to the router and the experts.",
     "moe_output": "Output of the sparse MoE block (weighted sum of top-k expert outputs) before the residual add.",
@@ -64,6 +81,14 @@ ROUTING_SEMANTICS = {
     ),
     "router_logits": "Raw pre-softmax router logits (x @ W_router.T), fp32 upcast from the model dtype.",
     "router_probs": "softmax(router_logits) over all experts, computed in fp32 (sums to 1 per token).",
+}
+
+ATTENTION_SEMANTICS = {
+    "attn_pattern": (
+        "Per-head attention probabilities softmax(q k^T * scale + mask) from the eager attention implementation, "
+        "dims [head, query_position, key_position]. Query rows are the token indices in query_positions; all keys "
+        "are kept. Masked entries (causal / sliding window) are exactly 0."
+    ),
 }
 
 _TOL = {torch.float32: 1e-5, torch.float16: 2.0**-10, torch.bfloat16: 2.0**-7}
@@ -82,18 +107,39 @@ class TraceSpec:
     save_router_logits: bool = False
     save_router_probs: bool = False
     activation_dtype: torch.dtype = torch.float32
+    save_attention: bool = False
+    attention_layers: list[int] = field(default_factory=list)
+    """Non-negative, sorted layer indices for attention patterns."""
+    attention_query_positions: str | list[int] = "all"
+    attention_dtype: torch.dtype = torch.bfloat16
 
     @classmethod
     def from_config(cls, cfg: TraceConfig, num_layers: int) -> "TraceSpec":
         a = cfg.activations
+        att = cfg.attention
+        dt = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
         return cls(
             activation_types=list(a.types),
             activation_layers=resolve_layers(a.layers, num_layers),
             positions=a.positions,
             save_router_logits=cfg.routing.save_router_logits,
             save_router_probs=cfg.routing.save_router_probs,
-            activation_dtype={"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}[a.dtype],
+            activation_dtype=dt[a.dtype],
+            save_attention=att.save_patterns,
+            attention_layers=resolve_layers(att.layers, num_layers) if att.save_patterns else [],
+            attention_query_positions=att.query_positions,
+            attention_dtype=dt[att.dtype],
         )
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "activation_types": self.activation_types, "activation_layers": self.activation_layers,
+            "positions": self.positions, "activation_dtype": str(self.activation_dtype).replace("torch.", ""),
+            "save_router_logits": self.save_router_logits, "save_router_probs": self.save_router_probs,
+            "save_attention": self.save_attention, "attention_layers": self.attention_layers,
+            "attention_query_positions": self.attention_query_positions,
+            "attention_dtype": str(self.attention_dtype).replace("torch.", ""),
+        }
 
 
 def resolve_layers(layers: list[int] | str, num_layers: int) -> list[int]:
@@ -156,9 +202,22 @@ class ActivationTrace:
 
 
 @dataclass
+class AttentionTrace:
+    query_positions: list[int]
+    patterns: dict[int, torch.Tensor]
+    """layer -> [num_heads, len(query_positions), seq_len] tensor on CPU"""
+    source_dtype: str
+    attn_implementation: str
+    layer_types: list[str] | None
+    sliding_window: int | None
+    num_kv_heads: int
+
+
+@dataclass
 class TraceResult:
     routing: RoutingTrace
     activations: ActivationTrace
+    attention: AttentionTrace | None
     next_token_id: int
     """argmax of the prefill logits at the last position (greedy prediction of the first response token)."""
 
@@ -189,21 +248,28 @@ class TraceRecorder:
         self.spec = spec
         self.seq_len = seq_len
         self.positions = resolve_positions(spec.positions, seq_len)
+        self.query_positions = resolve_positions(spec.attention_query_positions, seq_len) if spec.save_attention else []
         self._handles: list[torch.utils.hooks.RemovableHandle] = []
         self._router_out: dict[int, tuple] = {}
         self._acts: dict[tuple[str, int], torch.Tensor] = {}
+        self._attn: dict[int, torch.Tensor] = {}
+        self._attn_dtype: torch.dtype | None = None
         self._model_dtype: torch.dtype | None = None
         self._pos_index: torch.Tensor | None = None
+        self._qpos_index: torch.Tensor | None = None
 
     # ---- hook factories -------------------------------------------------------------------------
-    def _check_bsh(self, x: torch.Tensor, what: str) -> None:
-        if x.dim() != 3 or x.shape[0] != 1 or x.shape[1] != self.seq_len or x.shape[2] != self.layout.hidden_size:
+    def _width(self, kind: str) -> int:
+        return self.layout.num_heads * self.layout.head_dim if kind == "attn_z" else self.layout.hidden_size
+
+    def _check_bsh(self, x: torch.Tensor, what: str, width: int) -> None:
+        if x.dim() != 3 or x.shape[0] != 1 or x.shape[1] != self.seq_len or x.shape[2] != width:
             raise RoutingVerificationError(
-                f"{what}: expected shape [1, {self.seq_len}, {self.layout.hidden_size}], got {tuple(x.shape)}"
+                f"{what}: expected shape [1, {self.seq_len}, {width}], got {tuple(x.shape)}"
             )
 
     def _store(self, kind: str, layer: int, x: torch.Tensor) -> None:
-        self._check_bsh(x, f"{kind}[layer {layer}]")
+        self._check_bsh(x, f"{kind}[layer {layer}]", self._width(kind))
         if self._pos_index is None or self._pos_index.device != x.device:
             self._pos_index = torch.tensor(self.positions, device=x.device)
         self._acts[(kind, layer)] = (
@@ -237,6 +303,28 @@ class TraceRecorder:
 
         return hook
 
+    def _attn_pattern_hook(self, layer: int):
+        def hook(module, args, output):
+            w = output[1] if isinstance(output, (tuple, list)) and len(output) > 1 else None
+            if w is None:
+                raise RoutingVerificationError(
+                    f"Layer {layer}: the attention module returned no attention weights. Patterns are only "
+                    "materialised by the eager attention implementation."
+                )
+            H, S = self.layout.num_heads, self.seq_len
+            if tuple(w.shape) != (1, H, S, S):
+                raise RoutingVerificationError(
+                    f"Layer {layer}: attention weights shape {tuple(w.shape)}, expected (1, {H}, {S}, {S})"
+                )
+            if self._qpos_index is None or self._qpos_index.device != w.device:
+                self._qpos_index = torch.tensor(self.query_positions, device=w.device)
+            self._attn_dtype = w.dtype
+            self._attn[layer] = (
+                w[0].index_select(1, self._qpos_index).detach().to("cpu", dtype=self.spec.attention_dtype).clone()
+            )
+
+        return hook
+
     # ---- context manager ------------------------------------------------------------------------
     def __enter__(self) -> "TraceRecorder":
         if self._handles:
@@ -249,6 +337,12 @@ class TraceRecorder:
                 for kind in self.spec.activation_types:
                     if kind == "resid_pre":
                         h = L.layers[i].register_forward_pre_hook(self._pre_hook(kind, i), with_kwargs=True)
+                    elif kind == "attn_input":
+                        h = L.attentions[i].register_forward_pre_hook(self._pre_hook(kind, i), with_kwargs=True)
+                    elif kind == "attn_z":
+                        h = L.attentions[i].o_proj.register_forward_pre_hook(self._pre_hook(kind, i), with_kwargs=True)
+                    elif kind == "attn_output":
+                        h = L.attentions[i].register_forward_hook(self._post_hook(kind, i))
                     elif kind == "resid_mid":
                         h = L.post_attention_norms[i].register_forward_pre_hook(self._pre_hook(kind, i), with_kwargs=True)
                     elif kind == "router_input":
@@ -260,6 +354,8 @@ class TraceRecorder:
                     else:
                         raise ValueError(f"Unknown activation type {kind!r}; valid: {ACTIVATION_TYPES}")
                     self._handles.append(h)
+            for i in self.spec.attention_layers if self.spec.save_attention else []:
+                self._handles.append(L.attentions[i].register_forward_hook(self._attn_pattern_hook(i)))
         except BaseException:
             self.remove()
             raise
@@ -364,6 +460,19 @@ class TraceRecorder:
             checks=checks,
         )
 
+    def attention(self, attn_implementation: str) -> AttentionTrace | None:
+        if not self.spec.save_attention:
+            return None
+        missing = sorted(set(self.spec.attention_layers) - set(self._attn))
+        if missing:
+            raise RuntimeError(f"Attention hooks did not fire for layers {missing}")
+        L = self.layout
+        return AttentionTrace(
+            query_positions=list(self.query_positions), patterns=dict(self._attn),
+            source_dtype=str(self._attn_dtype).replace("torch.", ""), attn_implementation=attn_implementation,
+            layer_types=L.layer_types, sliding_window=L.sliding_window, num_kv_heads=L.num_kv_heads,
+        )
+
     def activations(self) -> ActivationTrace:
         expected = {(k, i) for i in self.spec.activation_layers for k in self.spec.activation_types}
         missing = expected - set(self._acts)
@@ -396,9 +505,39 @@ def run_traced_forward(model: nn.Module, layout: MoELayout, input_ids: torch.Ten
     kwargs: dict[str, Any] = {"output_router_logits": True, "use_cache": False}
     if _supports_kwarg(model, "logits_to_keep"):
         kwargs["logits_to_keep"] = 1
-    with TraceRecorder(layout, spec, seq_len) as rec:
-        out = model(input_ids=input_ids, attention_mask=torch.ones_like(input_ids), **kwargs)
+    with eager_attention(model, enabled=spec.save_attention) as impl:
+        with TraceRecorder(layout, spec, seq_len) as rec:
+            out = model(input_ids=input_ids, attention_mask=torch.ones_like(input_ids), **kwargs)
     routing = rec.finalize_routing(getattr(out, "router_logits", None))
     acts = rec.activations()
+    attention = rec.attention(impl)
     next_token = int(out.logits[0, -1].argmax().item())
-    return TraceResult(routing=routing, activations=acts, next_token_id=next_token)
+    return TraceResult(routing=routing, activations=acts, attention=attention, next_token_id=next_token)
+
+
+def get_attn_implementation(model: nn.Module) -> str | None:
+    return getattr(model.config, "_attn_implementation", None)
+
+
+class eager_attention:
+    """Temporarily switch a model to eager attention (the only implementation that returns patterns)."""
+
+    def __init__(self, model: nn.Module, enabled: bool = True):
+        self.model, self.enabled = model, enabled
+        self.prev: str | None = None
+
+    def _set(self, impl: str) -> None:
+        if hasattr(self.model, "set_attn_implementation"):
+            self.model.set_attn_implementation(impl)
+        else:  # older transformers
+            self.model.config._attn_implementation = impl
+
+    def __enter__(self) -> str:
+        self.prev = get_attn_implementation(self.model)
+        if self.enabled and self.prev != "eager":
+            self._set("eager")
+        return get_attn_implementation(self.model) or "unknown"
+
+    def __exit__(self, *exc) -> None:
+        if self.enabled and self.prev is not None and get_attn_implementation(self.model) != self.prev:
+            self._set(self.prev)

@@ -77,7 +77,7 @@ def doctor_report(output_dir: str | Path | None = None) -> tuple[dict[str, Any],
         p.mkdir(parents=True, exist_ok=True)
         info["hf_home_free_gb"] = round(shutil.disk_usage(p).free / 1e9, 1)
         if info["hf_home_free_gb"] < 20:
-            warnings.append(f"Only {info['hf_home_free_gb']} GB free in HF_HOME ({hf_home}); OLMoE weights need ~14 GB.")
+            warnings.append(f"Only {info['hf_home_free_gb']} GB free in HF_HOME ({hf_home}); OLMoE needs ~14 GB, Mellum2.1 ~24 GB.")
     except Exception:
         pass
     if output_dir:
@@ -89,7 +89,7 @@ def doctor_report(output_dir: str | Path | None = None) -> tuple[dict[str, Any],
     else:
         mem = max(g["total_memory_gb"] for g in info["gpus"])
         if mem < 16:
-            warnings.append(f"Largest GPU has {mem} GB; OLMoE-1B-7B in bf16 needs ~14 GB for weights plus activations.")
+            warnings.append(f"Largest GPU has {mem} GB; bf16 weights need ~14 GB (OLMoE) or ~24 GB (Mellum2.1) plus activations.")
         if not info.get("bf16_supported"):
             warnings.append("GPU lacks native bf16 (pre-Ampere, e.g. T4); dtype=auto will use float16.")
     return info, warnings

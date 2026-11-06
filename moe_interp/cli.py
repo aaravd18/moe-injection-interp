@@ -36,7 +36,7 @@ def _add_model_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--device", help="auto | cuda | cuda:N | mps | cpu")
     p.add_argument("--dtype", choices=["auto", "bfloat16", "float16", "float32"])
     p.add_argument("--tiny-random", action="store_true",
-                   help="DEBUG: tiny random OLMoE with the real tokenizer (pipeline test; meaningless results)")
+                   help="DEBUG: tiny random model of the same architecture, real tokenizer (pipeline test; meaningless results)")
     p.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
                    help="Override any config key, e.g. --set trace.activations.positions=all (repeatable)")
 
