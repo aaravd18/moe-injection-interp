@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moe-interp"
+version = "0.1.0"
+description = "Inference-only routing and activation tracing for MoE LMs under prompt injection (OLMoE)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.1",
+    "transformers>=4.46",
+    "accelerate>=0.26",
+    "safetensors>=0.4",
+    "numpy>=1.24",
+    "pandas>=1.5",
+    "matplotlib>=3.7",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "nbformat>=5", "nbclient>=0.7", "ipykernel>=6"]
+
+[project.scripts]
+moe-interp = "moe_interp.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["moe_interp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: loads the real OLMoE model (needs ~14 GB GPU memory and a download). Enable with MOE_INTERP_RUN_INTEGRATION=1.",
+]
+filterwarnings = ["ignore::DeprecationWarning"]

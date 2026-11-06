@@ -1,0 +1,16 @@
+# experiment outputs
+results/
+# environments
+.venv*/
+venv/
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+# notebooks
+.ipynb_checkpoints/
+# os
+.DS_Store

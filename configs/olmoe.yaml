@@ -1,0 +1,52 @@
+# Default experiment config for OLMoE-1B-7B-0125-Instruct on a single GPU (~24 GB).
+# Every key is optional; unknown keys are rejected. Override any key from the CLI with
+#   --set section.key=value     e.g. --set trace.activations.positions=all
+experiment_name: null          # defaults to the --output directory name
+seed: 0
+
+model:
+  model_id: allenai/OLMoE-1B-7B-0125-Instruct
+  revision: b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e   # Hub commit verified 2026-11-05; set null for latest
+  local_path: null             # e.g. /content/drive/MyDrive/models/olmoe (overrides model_id)
+  device: auto                 # auto | cuda | cuda:0 | mps | cpu
+  dtype: auto                  # auto (bf16 on Ampere+, fp16 on older CUDA, fp32 on CPU) | bfloat16 | float16 | float32
+  attn_implementation: null    # null = transformers default (sdpa); "eager" also works
+  tiny_random: false
+
+prompt:
+  add_generation_prompt: true  # append "<|assistant|>\n"
+
+generation:
+  enabled: true
+  max_new_tokens: 128
+  do_sample: false             # greedy / deterministic
+  temperature: null
+  top_p: null
+  repetition_penalty: null
+
+trace:
+  enabled: true
+  routing:                     # top-k ids + dispatched weights are always saved ([L, S, k])
+    save_router_logits: false  # + raw logits [L, S, E]
+    save_router_probs: false   # + softmax probs [L, S, E]
+  activations:
+    types: [resid_mid, router_input, moe_output, resid_post]   # also: resid_pre
+    layers: [0, 4, 8, 12, -1]  # or "all"; negative indices count from the end
+    positions: last            # last | all | last_k:N | [explicit, indices]
+    dtype: float32
+
+data:
+  path: data/examples.jsonl
+  sample_ids: null
+  task_types: null
+  conditions: null
+  limit: null
+
+analysis:
+  reference: clean
+  control: benign              # null to skip control-adjusted deltas
+  alignment: common_suffix     # common_suffix | common_prefix | last_n | span
+  last_n: 8
+  span: null
+  min_aligned_tokens: 1
+  save_pdf: false

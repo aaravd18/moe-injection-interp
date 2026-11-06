@@ -1,0 +1,18 @@
+# CPU pipeline test: the REAL OLMoE tokenizer/chat template (~2 MB download) with a TINY RANDOM model.
+# Outputs are meaningless; plots are labelled accordingly. Use to check that the whole pipeline runs on a laptop.
+model:
+  model_id: allenai/OLMoE-1B-7B-0125-Instruct
+  revision: b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e
+  tiny_random: true
+  device: cpu
+  dtype: float32
+generation:
+  max_new_tokens: 8
+trace:
+  routing:
+    save_router_logits: true
+  activations:
+    layers: all
+    positions: all
+data:
+  path: data/examples.jsonl

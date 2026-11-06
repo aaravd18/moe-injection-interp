@@ -1,0 +1,18 @@
+# Small-experiment variant: every layer, every prompt token, all activation types, and full router logits.
+# Disk use per variant is ~ S * (16 layers * 5 types * 2048 * 4 bytes) = ~650 KB per prompt token. Use for a few short prompts only.
+model:
+  model_id: allenai/OLMoE-1B-7B-0125-Instruct
+  revision: b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e
+generation:
+  max_new_tokens: 64
+trace:
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types: [resid_pre, resid_mid, router_input, moe_output, resid_post]
+    layers: all
+    positions: all
+    dtype: float32
+data:
+  path: data/examples.jsonl
