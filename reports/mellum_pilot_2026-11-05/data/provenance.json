@@ -1,0 +1,311 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "shareable_derived_results",
+  "checkpoint_date": "2026-11-05",
+  "timezone": "America/Los_Angeles",
+  "inference_only": true,
+  "model": {
+    "model_id": "JetBrains/Mellum2.1-12B-A2.5B-Thinking",
+    "requested_revision": "92ddae9fc7665e9f801d141d2e5a6b2caf2460c4",
+    "resolved_commit_hash": null,
+    "dtype": "bfloat16",
+    "attn_implementation": "sdpa",
+    "experts_implementation": "grouped_mm",
+    "num_parameters": 12149923072,
+    "architecture": {
+      "model_type": "mellum",
+      "num_layers": 28,
+      "num_experts": 64,
+      "top_k": 8,
+      "norm_topk_prob": true,
+      "hidden_size": 2304,
+      "num_attention_heads": 32,
+      "num_key_value_heads": 4,
+      "head_dim": 128,
+      "layer_types": [
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "sliding_attention",
+        "full_attention"
+      ],
+      "sliding_window": 1024,
+      "router_module_class": "MellumTopKRouter",
+      "moe_block_class": "MellumSparseMoeBlock",
+      "attention_class": "MellumAttention",
+      "decoder_layer_class": "MellumDecoderLayer"
+    }
+  },
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+    "torch": "2.14.1+cu130",
+    "transformers": "5.22.1",
+    "safetensors": "0.8.0",
+    "accelerate": "1.15.0",
+    "numpy": "2.5.4",
+    "code_git_commit": "df09e640adb4e9d8e5db38c6a2fa602e18174185",
+    "torch_cuda_version": "13.0",
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_memory_gb": 85.02,
+        "compute_capability": "9.0"
+      }
+    ],
+    "bf16_supported": true
+  },
+  "generation_config_effective": {
+    "max_length": null,
+    "max_new_tokens": 2048,
+    "min_length": null,
+    "min_new_tokens": null,
+    "early_stopping": null,
+    "max_time": null,
+    "stop_strings": null,
+    "do_sample": false,
+    "num_beams": null,
+    "use_mtp": null,
+    "use_cache": null,
+    "cache_implementation": null,
+    "cache_config": null,
+    "max_cache_len": null,
+    "temperature": null,
+    "top_k": null,
+    "top_p": null,
+    "min_p": null,
+    "top_h": null,
+    "typical_p": null,
+    "epsilon_cutoff": null,
+    "eta_cutoff": null,
+    "repetition_penalty": null,
+    "encoder_repetition_penalty": null,
+    "length_penalty": null,
+    "no_repeat_ngram_size": null,
+    "bad_words_ids": null,
+    "renormalize_logits": null,
+    "forced_bos_token_id": null,
+    "forced_eos_token_id": null,
+    "remove_invalid_values": null,
+    "exponential_decay_length_penalty": null,
+    "suppress_tokens": null,
+    "begin_suppress_tokens": null,
+    "sequence_bias": null,
+    "token_healing": null,
+    "guidance_scale": null,
+    "watermarking_config": null,
+    "num_return_sequences": null,
+    "output_attentions": null,
+    "output_hidden_states": null,
+    "output_scores": null,
+    "output_logits": null,
+    "return_dict_in_generate": null,
+    "pad_token_id": 0,
+    "bos_token_id": 0,
+    "eos_token_id": 28,
+    "encoder_no_repeat_ngram_size": null,
+    "decoder_start_token_id": null,
+    "is_assistant": null,
+    "num_assistant_tokens": null,
+    "num_assistant_tokens_schedule": null,
+    "assistant_confidence_threshold": null,
+    "prompt_lookup_num_tokens": null,
+    "max_matching_ngram_size": null,
+    "assistant_early_exit": null,
+    "assistant_lookbehind": null,
+    "target_lookbehind": null,
+    "assistant_ensemble_weight": null,
+    "speculation_type": null,
+    "compile_config": null,
+    "disable_compile": null,
+    "continuous_batching_config": null,
+    "low_memory": null,
+    "penalty_alpha": null,
+    "dola_layers": null,
+    "diversity_penalty": null,
+    "num_beam_groups": null,
+    "constraints": null,
+    "force_words_ids": null,
+    "prefill_chunk_size": null,
+    "_from_model_config": true,
+    "transformers_version": "5.22.1"
+  },
+  "trace_spec": {
+    "activation_types": [
+      "resid_mid",
+      "router_input",
+      "moe_output",
+      "resid_post"
+    ],
+    "activation_layers": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      27
+    ],
+    "positions": "all",
+    "activation_dtype": "bfloat16",
+    "save_router_logits": true,
+    "save_router_probs": true,
+    "save_attention": false,
+    "attention_layers": [],
+    "attention_query_positions": "all",
+    "attention_dtype": "bfloat16"
+  },
+  "semantics": {
+    "routing": {
+      "topk_ids": "Expert indices selected for each token, in descending order of routing probability.",
+      "topk_weights": "Weights actually multiplied into each selected expert's output: softmax(router_logits)[topk_ids], renormalised over the top-k only if norm_topk_prob is true. Stored as fp32 (lossless upcast from the model dtype).",
+      "router_logits": "Raw pre-softmax router logits (x @ W_router.T), fp32 upcast from the model dtype.",
+      "router_probs": "softmax(router_logits) over all experts, computed in fp32 (sums to 1 per token)."
+    },
+    "activations": {
+      "resid_pre": "Residual stream entering the decoder layer (before attention). Equals resid_post of the previous layer.",
+      "attn_input": "input_layernorm(resid_pre): the exact tensor fed to the q/k/v projections.",
+      "attn_z": "Per-head attention outputs (pattern-weighted sums of values) concatenated over heads, before o_proj. Width num_heads*head_dim; head h occupies columns [h*head_dim, (h+1)*head_dim).",
+      "attn_output": "Output of the attention block (o_proj(attn_z)) before the residual add. resid_mid = resid_pre + attn_output.",
+      "resid_mid": "Residual stream after attention, before the MoE block (input to post_attention_layernorm).",
+      "router_input": "post_attention_layernorm(resid_mid): the exact tensor fed to the router and the experts.",
+      "moe_output": "Output of the sparse MoE block (weighted sum of top-k expert outputs) before the residual add.",
+      "resid_post": "Residual stream after the MoE block (decoder layer output) = resid_mid + moe_output."
+    },
+    "attention": {
+      "attn_pattern": "Per-head attention probabilities softmax(q k^T * scale + mask) from the eager attention implementation, dims [head, query_position, key_position]. Query rows are the token indices in query_positions; all keys are kept. Masked entries (causal / sliding window) are exactly 0."
+    },
+    "note": "Traces come from a separate instrumented prefill pass, not from generation."
+  },
+  "pilot_source_time_bounds": {
+    "started_at": "2026-11-06T04:33:10+00:00",
+    "finished_at": "2026-11-06T04:42:22+00:00"
+  },
+  "compute_session": {
+    "started_at": "2026-11-06T03:59:52.116009+00:00",
+    "stopped_at": "2026-11-06T04:43:42.463094+00:00",
+    "report_completed_at": "2026-11-06T04:53:03.356334+00:00",
+    "note": "Compute-session bounds include setup and all tests, not only measured pilot inference."
+  },
+  "dataset": {
+    "path": "../../../data/mellum_pilot_v1/examples.jsonl",
+    "sha256": "8408064ef1acd325a1c58f448d755812f80ecab4bc664578bc777351df900a1c",
+    "n_base_tasks": 20,
+    "n_prompt_variants": 60,
+    "dev_tasks": 5,
+    "eval_tasks": 15,
+    "origin": "Templates authored with Codex and filled by a seeded Python generator; not an external benchmark."
+  },
+  "original_artifact_hashes": {
+    "pilot_metadata": "15d8d9681205fac2fb5ae536d7816f034526d72f5d0296b3f0688785d12ae1ec",
+    "original_report_generator": "7b1d37baf752703739c84312b8e72dbf36857be1362a0d6232a11013140e48cc",
+    "original_dataset_generator": "798a2f562b29e7e7017bf7399c8110e305d0e70e13a73af52af6e9874b511964",
+    "original_scorer": "edc8d15e5a5939ba642e4179d4c867a385bdf283566490eecb7a55bd61fa627b"
+  },
+  "exports": [
+    {
+      "file": "pilot_generations.jsonl",
+      "sha256": "5e2eb70203de3b54140c5d1ea4bc9abfb8618d994c1fa9b53ba1957bd24a1da6",
+      "source_artifact": "raw/pilot/generations.jsonl",
+      "original_source_sha256": "a27cebdf40d7bd55472c5bd8fc626761eaa4f6dcf8ef5655b17d220a1ee98da7",
+      "transformation": "Allowlist final answers, completion evidence, input token alignment, timing and counts; omit prompts, generated reasoning, output token IDs and trace paths."
+    },
+    {
+      "file": "regression_generations.jsonl",
+      "sha256": "4373d7eba941f30a48900d5b92c829478cdc7c1f5172df6e93e7299b66351282",
+      "source_artifact": "raw/regression/generations.jsonl",
+      "original_source_sha256": "4c151bc1684f9f21c1555a86f853eedfe3ae167e1c738bac9455d59e830a015b",
+      "transformation": "Allowlist final answers, completion evidence, input token alignment, timing and counts; omit prompts, generated reasoning, output token IDs and trace paths."
+    },
+    {
+      "file": "scores.csv",
+      "sha256": "c487ae724614e15ea3270316a3dfd759ea3e2c7e24a1849e10e9e60471525310",
+      "source_artifact": "scores/scores.csv",
+      "original_source_sha256": "f9d3770bda39b600f29bb45a65b3cd9e348aa7079420ed8e76aca9ab860ed9e2",
+      "transformation": "Remove only response_text (generated reasoning); preserve all scoring fields."
+    },
+    {
+      "file": "scoring_summary.json",
+      "sha256": "15ffae9aa621b924b31077bbfae0193905a8c4a5ebed8c4c191ee08537376e51",
+      "source_artifact": "scores/scoring_summary.json",
+      "original_source_sha256": "b81cb6cc9fae6e91d51910e8ca5d719a0117a4c9977bdbb2aa1bc996a52c7af0",
+      "transformation": "Preserve recorded scores; distinguish original generation/scorer hashes from the included derived generations."
+    },
+    {
+      "file": "pilot_overlap.csv",
+      "sha256": "82f54cc91ebfd3db76160fb09557c9c3d6a7efc0b1c7b688d6627ed6fbf6859c",
+      "source_artifact": "raw/pilot/metrics/overlap.csv",
+      "original_source_sha256": "82f54cc91ebfd3db76160fb09557c9c3d6a7efc0b1c7b688d6627ed6fbf6859c",
+      "transformation": "Byte-identical per-sample metric table."
+    },
+    {
+      "file": "pilot_jsd.csv",
+      "sha256": "187675a5b966ce2a325bf5e85b347b7446ef6ab9e7ca6c3a5a00c39352dd1247",
+      "source_artifact": "raw/pilot/metrics/jsd.csv",
+      "original_source_sha256": "187675a5b966ce2a325bf5e85b347b7446ef6ab9e7ca6c3a5a00c39352dd1247",
+      "transformation": "Byte-identical per-sample metric table."
+    },
+    {
+      "file": "pilot_control_delta.csv",
+      "sha256": "7b9ad978ba894055d5e9b0d399302eea0cf1ab4b71b648b9d2a86916ee1a4c23",
+      "source_artifact": "raw/pilot/metrics/control_delta.csv",
+      "original_source_sha256": "7b9ad978ba894055d5e9b0d399302eea0cf1ab4b71b648b9d2a86916ee1a4c23",
+      "transformation": "Byte-identical per-sample metric table."
+    },
+    {
+      "file": "pilot_activation_similarity.csv",
+      "sha256": "fbbaf44bcfbf1c7bc45d535d401d7600f598536574ebcfc14b0d11556a506ec3",
+      "source_artifact": "raw/pilot/metrics/activation_similarity.csv",
+      "original_source_sha256": "fbbaf44bcfbf1c7bc45d535d401d7600f598536574ebcfc14b0d11556a506ec3",
+      "transformation": "Byte-identical per-sample metric table."
+    },
+    {
+      "file": "pilot_alignment.csv",
+      "sha256": "3706df26f555f7cbb994ee54c4dca4a0f6ebc46c0f967ff289d9489c2ed1a0ff",
+      "source_artifact": "raw/pilot/metrics/alignment.csv",
+      "original_source_sha256": "3706df26f555f7cbb994ee54c4dca4a0f6ebc46c0f967ff289d9489c2ed1a0ff",
+      "transformation": "Byte-identical per-sample metric table."
+    },
+    {
+      "file": "interpretation.json",
+      "sha256": "1700f0ddfff86fdf29fad1f83780b445f8c13c03f05c10870f01ac78dc6b5c77",
+      "source_artifact": "interpretation.json",
+      "original_source_sha256": "1ac5f2e37d1dec6647889308c1b19620ae13400e1d84d4d01f0f5db916906db3",
+      "transformation": "Keep findings; use relative references and distinguish original hashes from exported hashes."
+    },
+    {
+      "file": "regression_comparison.json",
+      "sha256": "7c756a787791737db44bc43cadc8d0ddbd7bf351ec82d422cb5e50191bb4ebad",
+      "source_artifact": "regression-comparison.json",
+      "original_source_sha256": "63163584ed3894bf4e320014cfa1dee1cc07a8dd5ab3dc2fa9aa35ef07465a36",
+      "transformation": "Preserve all 12 final-answer comparisons and assessments; remove local paths and label source hashes."
+    }
+  ],
+  "omitted": "Model weights, raw tensors, generated reasoning, operational resource identifiers, credentials, transfer/billing records and machine-local paths are not included. Final-answer re-scoring and plotting can be reproduced from these derived inputs; tensor extraction requires a new inference run.",
+  "record_hash_definition": "original_record_sha256 is SHA256 of the exact original UTF-8 JSONL line, excluding its trailing newline; it is not a canonical JSON serialization hash."
+}

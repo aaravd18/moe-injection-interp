@@ -1,0 +1,99 @@
+{
+  "dataset_version": "mellum_pilot_v1",
+  "seed": 18220261105,
+  "generator": "scripts/build_mellum_pilot.py",
+  "generator_sha256": "798a2f562b29e7e7017bf7399c8110e305d0e70e13a73af52af6e9874b511964",
+  "n_base_tasks": 20,
+  "n_prompt_variants": 60,
+  "splits": {
+    "dev": {
+      "tasks": 5,
+      "prompts": 15
+    },
+    "eval": {
+      "tasks": 15,
+      "prompts": 45
+    }
+  },
+  "cell_counts": [
+    {
+      "split": "dev",
+      "task_type": "document_qa",
+      "attack_family": "authority_spoof",
+      "tasks": 1
+    },
+    {
+      "split": "dev",
+      "task_type": "document_qa",
+      "attack_family": "direct_override",
+      "tasks": 2
+    },
+    {
+      "split": "dev",
+      "task_type": "field_extraction",
+      "attack_family": "authority_spoof",
+      "tasks": 1
+    },
+    {
+      "split": "dev",
+      "task_type": "field_extraction",
+      "attack_family": "direct_override",
+      "tasks": 1
+    },
+    {
+      "split": "eval",
+      "task_type": "document_qa",
+      "attack_family": "authority_spoof",
+      "tasks": 4
+    },
+    {
+      "split": "eval",
+      "task_type": "document_qa",
+      "attack_family": "direct_override",
+      "tasks": 3
+    },
+    {
+      "split": "eval",
+      "task_type": "field_extraction",
+      "attack_family": "authority_spoof",
+      "tasks": 4
+    },
+    {
+      "split": "eval",
+      "task_type": "field_extraction",
+      "attack_family": "direct_override",
+      "tasks": 4
+    }
+  ],
+  "files": {
+    "examples.jsonl": {
+      "sha256": "8408064ef1acd325a1c58f448d755812f80ecab4bc664578bc777351df900a1c",
+      "bytes": 63764
+    },
+    "dev.jsonl": {
+      "sha256": "34b7ee2c7b0c827d66b43bb36ceb90bb1e460c9102ee9a11ec05be7cf1a8a1af",
+      "bytes": 15902
+    },
+    "eval.jsonl": {
+      "sha256": "8b74e3c88f584dfac84f9f53698a8df5d46e4ae19859901bca68f6c48c03a807",
+      "bytes": 47862
+    },
+    "schema.json": {
+      "sha256": "9ae22315a88d1017011fc0c10160229b27fbd04149892f06b54f0616fc4212bc",
+      "bytes": 783
+    }
+  },
+  "provenance": "Locally authored templates and seeded fictional facts. No external dataset, API, or model generation.",
+  "review": {
+    "automated_consistency": "passed",
+    "human_review": "pending",
+    "model_validation": "pending"
+  },
+  "limitations": [
+    "20 unique records from two templates, not an independent sample of real-world tasks.",
+    "Dev/eval share templates and attack families; no unseen-family generalization test.",
+    "Controls match position and formatting and approximate word count, not exact tokenizer length or semantics.",
+    "Both inserted conditions mention the same target; benign text contains document-level instructions.",
+    "No real-model results or attack efficacy are implied."
+  ]
+}

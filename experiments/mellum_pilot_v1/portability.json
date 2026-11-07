@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "original_inference_code_revision": "df09e640adb4e9d8e5db38c6a2fa602e18174185",
+  "frozen_dataset": {
+    "path": "data/mellum_pilot_v1",
+    "dataset_version": "mellum_pilot_v1",
+    "original_generator_sha256": "798a2f562b29e7e7017bf7399c8110e305d0e70e13a73af52af6e9874b511964",
+    "dataset_json_schema_manifest_preserved": true,
+    "readme_updated_for_repository_paths": true
+  },
+  "code_adaptations": [
+    {
+      "path": "experiments/mellum_pilot_v1/scripts/build_mellum_pilot.py",
+      "change": "Byte-for-byte original generator; pass --output-dir explicitly. The frozen manifest keeps the historical scripts/build_mellum_pilot.py label."
+    },
+    {
+      "path": "experiments/mellum_pilot_v1/scripts/score_mellum_pilot.py",
+      "change": "Requires explicit boolean incomplete_thinking for final-answer-only exported records; raw unclosed thinking markers still override declared completion. Scoring rules otherwise unchanged."
+    },
+    {
+      "path": "experiments/mellum_pilot_v1/scripts/combine_mellum_pilot.py",
+      "change": "Byte-for-byte original combiner; works with explicit source/output paths."
+    },
+    {
+      "path": "experiments/mellum_pilot_v1/configs",
+      "change": "Only dataset paths relocated to repository data/. Capture and generation settings preserved."
+    }
+  ],
+  "validation": {
+    "dataset_grader_tests_passed": 13,
+    "frozen_generator_and_generated_data_hashes": "verified",
+    "published_score_rows_reproduced": 60,
+    "all_split_aggregate_scores_match": true,
+    "new_gpu_run_performed_for_packaging": false
+  },
+  "limitations": [
+    "Original dataset creation-time review labels are retained as historical metadata.",
+    "No human review is claimed.",
+    "Published generation exports omit raw reasoning; their completion flags were derived and checked against the original records."
+  ],
+  "contribution_file_sha256": {
+    "experiments/mellum_pilot_v1/scripts/build_mellum_pilot.py": "798a2f562b29e7e7017bf7399c8110e305d0e70e13a73af52af6e9874b511964",
+    "experiments/mellum_pilot_v1/scripts/score_mellum_pilot.py": "eaacf9a85875d39bd7b3826abd2f560c5b2b641742c44310e11447b4080f46ff",
+    "experiments/mellum_pilot_v1/scripts/combine_mellum_pilot.py": "adbde8c4ae118ed00602ca42f3993e17b0c84023aeda4b5e8852afaf34a0ea4b",
+    "experiments/mellum_pilot_v1/configs/pilot.yaml": "07c6ab2dcf4788c7210e9f12cc71afe4083aa263dbeb1a084cd50e8f53180661",
+    "experiments/mellum_pilot_v1/configs/regression.yaml": "a3b1b1223933777ad90b9a42a1e26b0462ec0dce2d9a3c085aea2bad904146b3",
+    "experiments/mellum_pilot_v1/requirements.txt": "a424c820995bf4345da673e2c69f56f4e1af5bfffe94a5cd7d378c6148f66d0a",
+    "experiments/mellum_pilot_v1/h100-environment.freeze.txt": "90ae5fa1c63ab55befa14a888124283953630de1a64f077f954e231343d24506"
+  }
+}

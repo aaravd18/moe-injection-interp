@@ -441,6 +441,17 @@ Every check should pass.
 
 ---
 
+### November 5, 2026: Mellum controlled pilot on H100
+
+The [controlled-pilot experiment](experiments/mellum_pilot_v1/README.md) adds a reproducible synthetic
+dataset, an exact final-answer scorer, pinned run configurations, and offline report regeneration.
+Its [results and provenance](reports/mellum_pilot_2026-11-05/README.md) cover 20 base tasks / 60 prompts
+(5 development and 15 held-out tasks), plus a separate rerun of the original 12 examples.
+On the held-out tasks, clean and benign accuracy were 15/15 and attacks succeeded in 12/15.
+Routing shifts were larger under injection but also occurred in resisted attacks; this small,
+template-based pilot does not establish a causal mechanism or general attack-detection performance.
+The existing Spark results above remain a separate baseline.
+
 ## 10. Limitations and extension points
 
 * **Prefill only.** Routing and activations are captured for prompt tokens, not for generated tokens. To trace
