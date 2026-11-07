@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "n_tasks": 20,
+  "n_eval_tasks": 15,
+  "n_dev_tasks": 5,
+  "expected_variants": 60,
+  "behavior": [
+    {
+      "split": "overall",
+      "measure": "Clean task accuracy",
+      "numerator": 20,
+      "denominator": 20,
+      "present": 20,
+      "scorable": 20,
+      "truncated": 0
+    },
+    {
+      "split": "overall",
+      "measure": "Benign task accuracy",
+      "numerator": 20,
+      "denominator": 20,
+      "present": 20,
+      "scorable": 20,
+      "truncated": 0
+    },
+    {
+      "split": "overall",
+      "measure": "Attack exact success",
+      "numerator": 16,
+      "denominator": 20,
+      "present": 20,
+      "scorable": 20,
+      "truncated": 0
+    },
+    {
+      "split": "overall",
+      "measure": "Attack success | clean passed",
+      "numerator": 16,
+      "denominator": 20,
+      "present": 20,
+      "scorable": 20,
+      "truncated": 0
+    },
+    {
+      "split": "overall",
+      "measure": "Task retained under attack | clean passed",
+      "numerator": 4,
+      "denominator": 20,
+      "present": 20,
+      "scorable": 20,
+      "truncated": 0
+    },
+    {
+      "split": "eval",
+      "measure": "Clean task accuracy",
+      "numerator": 15,
+      "denominator": 15,
+      "present": 15,
+      "scorable": 15,
+      "truncated": 0
+    },
+    {
+      "split": "eval",
+      "measure": "Benign task accuracy",
+      "numerator": 15,
+      "denominator": 15,
+      "present": 15,
+      "scorable": 15,
+      "truncated": 0
+    },
+    {
+      "split": "eval",
+      "measure": "Attack exact success",
+      "numerator": 12,
+      "denominator": 15,
+      "present": 15,
+      "scorable": 15,
+      "truncated": 0
+    },
+    {
+      "split": "eval",
+      "measure": "Attack success | clean passed",
+      "numerator": 12,
+      "denominator": 15,
+      "present": 15,
+      "scorable": 15,
+      "truncated": 0
+    },
+    {
+      "split": "eval",
+      "measure": "Task retained under attack | clean passed",
+      "numerator": 3,
+      "denominator": 15,
+      "present": 15,
+      "scorable": 15,
+      "truncated": 0
+    },
+    {
+      "split": "dev",
+      "measure": "Clean task accuracy",
+      "numerator": 5,
+      "denominator": 5,
+      "present": 5,
+      "scorable": 5,
+      "truncated": 0
+    },
+    {
+      "split": "dev",
+      "measure": "Benign task accuracy",
+      "numerator": 5,
+      "denominator": 5,
+      "present": 5,
+      "scorable": 5,
+      "truncated": 0
+    },
+    {
+      "split": "dev",
+      "measure": "Attack exact success",
+      "numerator": 4,
+      "denominator": 5,
+      "present": 5,
+      "scorable": 5,
+      "truncated": 0
+    },
+    {
+      "split": "dev",
+      "measure": "Attack success | clean passed",
+      "numerator": 4,
+      "denominator": 5,
+      "present": 5,
+      "scorable": 5,
+      "truncated": 0
+    },
+    {
+      "split": "dev",
+      "measure": "Task retained under attack | clean passed",
+      "numerator": 1,
+      "denominator": 5,
+      "present": 5,
+      "scorable": 5,
+      "truncated": 0
+    }
+  ],
+  "runtime": {
+    "variants": 60,
+    "trace_s": 21.9815,
+    "generation_s": 309.2211,
+    "trace_n": 60,
+    "generation_n": 60,
+    "sum_recorded_s": 331.20259999999996,
+    "output_tokens": 11064.0,
+    "output_tokens_per_s": 35.78022327713083,
+    "peak_allocated_gb": 24.494
+  },
+  "metric_scope": "held-out; equal weight per base task",
+  "figure_count": 7,
+  "reconciliation": "Re-scored all final answers and compared every retained scoring field; checked all saved layer-band means and outcome memberships against per-sample CSVs."
+}

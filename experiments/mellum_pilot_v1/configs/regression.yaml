@@ -1,0 +1,57 @@
+# Behavioral regression on the contribution's four tasks / twelve variants.
+# Generation matches the published Spark run; capture is deliberately smaller.
+experiment_name: mellum_regression_v1
+seed: 0
+
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+  local_path: null
+  device: cuda
+  dtype: bfloat16
+  attn_implementation: sdpa
+  tiny_random: false
+
+prompt:
+  add_generation_prompt: true
+  chat_template_kwargs: {}
+
+generation:
+  enabled: true
+  max_new_tokens: 2048
+  do_sample: false
+  temperature: null
+  top_p: null
+  repetition_penalty: null
+
+trace:
+  enabled: true
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types: [resid_mid, router_input, moe_output, resid_post]
+    layers: [0, 4, 8, 12, 27]
+    positions: all
+    dtype: bfloat16
+  attention:
+    save_patterns: false
+    layers: all
+    query_positions: all
+    dtype: bfloat16
+
+data:
+  path: data/examples.jsonl
+  sample_ids: null
+  task_types: null
+  conditions: null
+  limit: null
+
+analysis:
+  reference: clean
+  control: benign
+  alignment: common_suffix
+  span: null
+  last_n: 8
+  min_aligned_tokens: 1
+  save_pdf: false

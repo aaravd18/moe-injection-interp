@@ -1,0 +1,16 @@
+split,measure,numerator,denominator,present,scorable,truncated
+overall,Clean task accuracy,20,20,20,20,0
+overall,Benign task accuracy,20,20,20,20,0
+overall,Attack exact success,16,20,20,20,0
+overall,Attack success | clean passed,16,20,20,20,0
+overall,Task retained under attack | clean passed,4,20,20,20,0
+eval,Clean task accuracy,15,15,15,15,0
+eval,Benign task accuracy,15,15,15,15,0
+eval,Attack exact success,12,15,15,15,0
+eval,Attack success | clean passed,12,15,15,15,0
+eval,Task retained under attack | clean passed,3,15,15,15,0
+dev,Clean task accuracy,5,5,5,5,0
+dev,Benign task accuracy,5,5,5,5,0
+dev,Attack exact success,4,5,5,5,0
+dev,Attack success | clean passed,4,5,5,5,0
+dev,Task retained under attack | clean passed,1,5,5,5,0

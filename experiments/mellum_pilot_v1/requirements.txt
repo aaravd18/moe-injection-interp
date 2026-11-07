@@ -1,0 +1,15 @@
+# Direct dependency pins for Python 3.12, verified against PyPI 2026-11-06 UTC.
+# Remote setup first installs the exact official torch 2.14.1+cu130 wheel.
+# PEP 440 makes torch==2.14.1 accept that CUDA local-version build.
+# This is not a complete transitive lock: setup records the full pip freeze,
+# pip installation report and pip inspect output beside the run artifacts.
+torch==2.14.1
+transformers==5.22.1
+accelerate==1.15.0
+safetensors==0.8.0
+numpy==2.5.4
+pandas==3.1.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+huggingface-hub==2.4.0
+pytest==9.2.0

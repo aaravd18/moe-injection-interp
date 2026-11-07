@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "report_generator_sha256": "4f3735059913649b883c5d4e8f14bd3187736e81e1e7dbc19d68ac00d179dfd4",
+  "input_provenance_sha256": "a98b6f225c738dbd92d86c9ee4f7a5076bef6f08af4a45f38da192d89048d0e7",
+  "outputs": [
+    {
+      "path": "index.html",
+      "bytes": 27731,
+      "sha256": "7b8a2417b62aaa52446976e17b08fbde38bbc14d4e86d0b80d065f9648e33441"
+    },
+    {
+      "path": "report_summary.json",
+      "bytes": 3586,
+      "sha256": "18ba5f105c3db2b69c6ae407ca653fd35d3082eb7e3b3b1508d58895c594c66f"
+    },
+    {
+      "path": "tables/behavior_summary.csv",
+      "bytes": 754,
+      "sha256": "5a61c538ac7b1a8078c4a5b6a196b9f596c3ef93988e01b3dfb9372981202d5a"
+    },
+    {
+      "path": "tables/eval_activation_means.csv",
+      "bytes": 4602,
+      "sha256": "a0ebf03ca06994b322787377098352fb9f65408c3d035f3da333ae22731f5492"
+    },
+    {
+      "path": "tables/eval_control_means.csv",
+      "bytes": 13267,
+      "sha256": "9538753dae28497e303ad685da809809746ef5cb4b3ab2c0f29f9c90e2e66472"
+    },
+    {
+      "path": "tables/eval_injection_groups.csv",
+      "bytes": 263,
+      "sha256": "a4f8bf50a874899020bae84b21d66f398bb69e0678e15a75c230e6674096df5c"
+    },
+    {
+      "path": "tables/eval_layer_means.csv",
+      "bytes": 4586,
+      "sha256": "2687b891e2cf3518c37320ad34a7a97788202b5d3dd5487a03301e344b3b3a49"
+    },
+    {
+      "path": "tables/eval_outcome_routing.csv",
+      "bytes": 2906,
+      "sha256": "bec26c1c52187d17378542d5ec0d8f2e501d023a88395c55fcc7755f0a680e23"
+    },
+    {
+      "path": "plots/attack-outcomes.png",
+      "bytes": 112695,
+      "sha256": "a4286769ca8a62b9b79fb2cce10ac6de735b7aff27b55db76158186b07b2cb7d"
+    },
+    {
+      "path": "plots/moe_output.png",
+      "bytes": 115808,
+      "sha256": "0cf7db39972b4483799cf856c2f104f3e4c1c788974a0cbed2c678293bb185be"
+    },
+    {
+      "path": "plots/paired-routing.png",
+      "bytes": 109533,
+      "sha256": "c250de88efc9e6e4600587396fc00d66659a5bed8ceecf1c4ef506372d49e87e"
+    },
+    {
+      "path": "plots/resid_mid.png",
+      "bytes": 102623,
+      "sha256": "e1de9cc4a2dce2340169cb88fd7a0d7c57f852adfcb880d73b3b9393c51106ef"
+    },
+    {
+      "path": "plots/resid_post.png",
+      "bytes": 104014,
+      "sha256": "cd086d36d11209efe0228f8a4e169c9bf866dad04201ab69022d3b33053f8407"
+    },
+    {
+      "path": "plots/router_input.png",
+      "bytes": 109771,
+      "sha256": "78ccf150a8cd464454f7ea643a612a33270ad3aa8f7ed0928e069c264075e89b"
+    },
+    {
+      "path": "plots/routing.png",
+      "bytes": 152628,
+      "sha256": "81eecc3747dfb61fabe91f3f80fd1835fa525485e93e89a963a2d9fabddeb0ec"
+    }
+  ]
+}
