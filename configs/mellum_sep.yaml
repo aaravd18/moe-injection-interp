@@ -1,0 +1,37 @@
+# SEP security study, Mellum2.1, NON-THINKING mode (answer starts right after the prompt, so the prompt trace contains
+# the decision to execute or ignore the probe). 600 SEP items x 4 conditions = 2400 variants.
+# Capture: routing everywhere (+logits/probs); resid_post / attn_output / moe_output at every layer and token (bf16,
+# lossless); attention patterns of the last 16 query positions (the decision point) over all keys.
+seed: 0
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+  dtype: bfloat16
+  experts_implementation: eager   # ~5x faster batched generation on GB10 than the default grouped_mm
+prompt:
+  add_generation_prompt: true
+  chat_template_kwargs: {enable_thinking: false}
+generation:
+  max_new_tokens: 1024
+  do_sample: false
+  batch_size: 32
+trace:
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types: [resid_post, attn_output, moe_output]
+    layers: all
+    positions: all
+    dtype: bfloat16
+  attention:
+    save_patterns: true
+    layers: all
+    query_positions: last_k:16
+    dtype: bfloat16
+data:
+  path: data/sep_600.jsonl
+analysis:
+  reference: clean
+  control: benign
+  alignment: common_suffix

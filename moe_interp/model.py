@@ -272,7 +272,37 @@ def build_tiny_random_mellum(
     return MellumForCausalLM(config).eval()
 
 
-TINY_BUILDERS = {"olmoe": build_tiny_random_olmoe, "mellum": build_tiny_random_mellum}
+def build_tiny_random_qwen3_moe(
+    vocab_size: int,
+    *,
+    num_layers: int = 4,
+    num_experts: int = 8,
+    top_k: int = 2,
+    hidden_size: int = 64,
+    num_heads: int = 4,
+    num_kv_heads: int = 2,
+    norm_topk_prob: bool = True,
+    pad_token_id: int | None = None,
+    eos_token_id: int | None = None,
+    bos_token_id: int | None = None,
+    seed: int = 0,
+) -> nn.Module:
+    """A tiny randomly initialised Qwen3MoeForCausalLM (GQA, renormalised top-k, every layer sparse)."""
+    from transformers import Qwen3MoeConfig, Qwen3MoeForCausalLM
+
+    config = Qwen3MoeConfig(
+        vocab_size=vocab_size, hidden_size=hidden_size, intermediate_size=hidden_size * 2,
+        moe_intermediate_size=hidden_size // 2, num_hidden_layers=num_layers, num_attention_heads=num_heads,
+        num_key_value_heads=num_kv_heads, head_dim=hidden_size // num_heads, num_experts=num_experts,
+        num_experts_per_tok=top_k, norm_topk_prob=norm_topk_prob, mlp_only_layers=[], decoder_sparse_step=1,
+        max_position_embeddings=2048, pad_token_id=pad_token_id, eos_token_id=eos_token_id, bos_token_id=bos_token_id,
+    )
+    torch.manual_seed(seed)
+    return Qwen3MoeForCausalLM(config).eval()
+
+
+TINY_BUILDERS = {"olmoe": build_tiny_random_olmoe, "mellum": build_tiny_random_mellum,
+                 "qwen3_moe": build_tiny_random_qwen3_moe}
 
 
 def _model_type(cfg: ModelConfig) -> str:
@@ -318,6 +348,8 @@ def load_model(cfg: ModelConfig, seed: int = 0) -> LoadedModel:
         kwargs["dtype" if transformers_major_version() >= 5 else "torch_dtype"] = dtype
         if cfg.attn_implementation:
             kwargs["attn_implementation"] = cfg.attn_implementation
+        if cfg.experts_implementation:
+            kwargs["experts_implementation"] = cfg.experts_implementation
         if device.type == "cuda":
             kwargs["device_map"] = {"": device.index if device.index is not None else 0}
         log.info("Loading %s (revision=%s) as %s on %s", src, cfg.revision, dtype, device)

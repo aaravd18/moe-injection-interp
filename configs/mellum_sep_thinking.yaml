@@ -1,0 +1,22 @@
+# Behavior-only comparison: the same SEP prompts with Mellum's THINKING mode on (the model's default). No tracing:
+# in thinking mode the decision is made during the reasoning, after the prompt, so prompt traces would not contain it.
+# 150 items x {injection, user_instruction}.
+seed: 0
+model:
+  model_id: JetBrains/Mellum2.1-12B-A2.5B-Thinking
+  revision: 92ddae9fc7665e9f801d141d2e5a6b2caf2460c4
+  dtype: bfloat16
+  experts_implementation: eager
+prompt:
+  add_generation_prompt: true
+  chat_template_kwargs: {}
+generation:
+  max_new_tokens: 3072
+  do_sample: false
+  batch_size: 32
+trace:
+  enabled: false
+data:
+  path: data/sep_600.jsonl
+  limit: 150
+  conditions: [injection, user_instruction]

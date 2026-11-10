@@ -1,0 +1,35 @@
+# SEP security study, replication on Qwen3-30B-A3B-Instruct-2507 (non-thinking model; 48 layers, 128 experts, top-8,
+# norm_topk_prob=true, 32 query / 4 KV heads, no shared expert). Same capture as configs/mellum_sep.yaml.
+# First 300 SEP items of data/sep_600.jsonl (sorted by SEP index, so all four strata are represented).
+seed: 0
+model:
+  model_id: Qwen/Qwen3-30B-A3B-Instruct-2507
+  revision: 0d7cf23991f47feeb3a57ecb4c9cee8ea4a17bfe
+  dtype: bfloat16
+  experts_implementation: eager
+prompt:
+  add_generation_prompt: true
+generation:
+  max_new_tokens: 1024
+  do_sample: false
+  batch_size: 32
+trace:
+  routing:
+    save_router_logits: true
+    save_router_probs: true
+  activations:
+    types: [resid_post, attn_output, moe_output]
+    layers: all
+    positions: all
+    dtype: bfloat16
+  attention:
+    save_patterns: true
+    layers: all
+    query_positions: last_k:16
+    dtype: bfloat16
+data:
+  path: data/sep_600.jsonl
+  limit: 300
+analysis:
+  reference: clean
+  control: benign

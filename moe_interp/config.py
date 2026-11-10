@@ -36,6 +36,9 @@ class ModelConfig:
     """``auto``, ``bfloat16``, ``float16``, or ``float32``. ``auto`` = bf16 on capable GPUs, else fp16 on CUDA, else fp32."""
     attn_implementation: str | None = None
     """Passed to ``from_pretrained`` (e.g. ``sdpa``, ``eager``). ``None`` uses the Transformers default."""
+    experts_implementation: str | None = None
+    """Passed to ``from_pretrained`` (transformers >= 5): ``eager``, ``grouped_mm``, ``batched_mm``. ``None`` = default.
+    On a DGX Spark (GB10) ``eager`` is ~5x faster than the default ``grouped_mm`` for batched generation."""
     tiny_random: bool = False
     """DEBUG ONLY: build a tiny randomly initialised model of the same architecture as ``model_id`` (real tokenizer)
     to test the pipeline without the full download. Results are meaningless."""
@@ -59,6 +62,9 @@ class GenerationConfig:
     top_p: float | None = None
     """Only used when ``do_sample`` is true."""
     repetition_penalty: float | None = None
+    batch_size: int = 1
+    """Prompts generated together (left-padded). Tracing always runs one prompt at a time. >1 is much faster; in
+    bf16, padding can very occasionally flip a near-tie vs. batch size 1 (see first_token_matches_prefill)."""
 
 
 @dataclass
@@ -232,6 +238,8 @@ def validate_config(cfg: ExperimentConfig) -> None:
         raise ConfigError("prompt.chat_template_kwargs must be a mapping")
     if cfg.model.dtype not in ("auto", "bfloat16", "float16", "float32"):
         raise ConfigError(f"model.dtype must be auto/bfloat16/float16/float32, got {cfg.model.dtype!r}")
+    if cfg.generation.batch_size < 1:
+        raise ConfigError("generation.batch_size must be >= 1")
     if cfg.generation.max_new_tokens < 1:
         raise ConfigError("generation.max_new_tokens must be >= 1")
     if cfg.analysis.alignment not in ("common_suffix", "common_prefix", "last_n", "span"):

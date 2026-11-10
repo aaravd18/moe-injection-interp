@@ -104,6 +104,23 @@ def split_response(tokenizer: Any, response_ids: list[int], text: str) -> tuple[
     return split_thinking(text)
 
 
+@torch.inference_mode()
+def generate_batch(model: Any, id_lists: list[list[int]], gc: Any, device: torch.device) -> list[list[int]]:
+    """Greedy/sampled generation for several prompts at once with LEFT padding. Returns each response's token ids,
+    cut after the first EOS (padding after EOS removed). With one prompt this is exactly the unpadded call."""
+    pad = gc.pad_token_id
+    L = max(len(x) for x in id_lists)
+    ids = torch.tensor([[pad] * (L - len(x)) + x for x in id_lists], dtype=torch.long, device=device)
+    mask = torch.tensor([[0] * (L - len(x)) + [1] * len(x) for x in id_lists], dtype=torch.long, device=device)
+    gen = model.generate(input_ids=ids, attention_mask=mask, generation_config=gc)
+    eos = _eos_ids(gc)
+    out = []
+    for row in gen[:, L:].tolist():
+        cut = next((i for i, t in enumerate(row) if t in eos), None)
+        out.append(row[: cut + 1] if cut is not None else row)
+    return out
+
+
 def _eos_ids(gc: Any) -> set[int]:
     e = gc.eos_token_id
     if e is None:
@@ -203,85 +220,92 @@ def run_experiment(
     todo = [(s, c) for s in samples for c in s.variants if (s.id, c) not in done]
     log.info("%d variants to run (%d already done)", len(todo), len(done))
 
-    for n, (sample, cond) in enumerate(todo, start=1):
-        rp = prompts[(sample.id, cond)]
-        ids = torch.tensor([rp.input_ids], dtype=torch.long, device=device)
-        record: dict[str, Any] = {
-            "sample_id": sample.id,
-            "condition": cond,
-            "task_type": sample.task_type,
-            "metadata": sample.metadata,
-            "evaluation": sample.evaluation,
-            "messages": sample.variants[cond].messages,
-            "prompt_text": rp.text,
-            "input_ids": rp.input_ids,
-            "attention_mask": rp.attention_mask,
-            "num_prompt_tokens": len(rp.input_ids),
-            "message_token_spans": [None if s is None else s.to_dict() for s in rp.message_token_spans],
-            "spans": {k: v.to_dict() for k, v in rp.spans.items()},
-        }
-        timing: dict[str, float] = {}
-        if device.type == "cuda":
-            torch.cuda.reset_peak_memory_stats(device)
-
-        if cfg.trace.enabled:
-            torch.manual_seed(cfg.seed)
-            _sync(device)
-            t0 = time.perf_counter()
-            tr = run_traced_forward(model, layout, ids, spec)
-            _sync(device)
-            timing["trace_forward_s"] = round(time.perf_counter() - t0, 4)
-            td = trace_dir(out, sample.id, cond)
-            save_trace(
-                td, sample_id=sample.id, condition=cond, input_ids=rp.input_ids, routing=tr.routing,
-                activations=tr.activations, attention=tr.attention,
-                extra={"prompt_text": rp.text, "spans": record["spans"],
-                       "message_token_spans": record["message_token_spans"],
-                       "prefill_argmax_token_id": tr.next_token_id},
-            )
-            record["trace_dir"] = str(td.relative_to(out))
-            record["routing_source"] = tr.routing.source
-            record["prefill_argmax_token_id"] = tr.next_token_id
+    bs = max(1, cfg.generation.batch_size)
+    n_done = 0
+    for c0 in range(0, len(todo), bs):
+        chunk = todo[c0:c0 + bs]
+        records, chunk_ids = [], []
+        for sample, cond in chunk:
+            rp = prompts[(sample.id, cond)]
+            ids = torch.tensor([rp.input_ids], dtype=torch.long, device=device)
+            record: dict[str, Any] = {
+                "sample_id": sample.id,
+                "condition": cond,
+                "task_type": sample.task_type,
+                "metadata": sample.metadata,
+                "evaluation": sample.evaluation,
+                "messages": sample.variants[cond].messages,
+                "prompt_text": rp.text,
+                "input_ids": rp.input_ids,
+                "attention_mask": rp.attention_mask,
+                "num_prompt_tokens": len(rp.input_ids),
+                "message_token_spans": [None if s is None else s.to_dict() for s in rp.message_token_spans],
+                "spans": {k: v.to_dict() for k, v in rp.spans.items()},
+                "timing": {},
+            }
+            if device.type == "cuda":
+                torch.cuda.reset_peak_memory_stats(device)
+            if cfg.trace.enabled:
+                torch.manual_seed(cfg.seed)
+                _sync(device)
+                t0 = time.perf_counter()
+                tr = run_traced_forward(model, layout, ids, spec)
+                _sync(device)
+                record["timing"]["trace_forward_s"] = round(time.perf_counter() - t0, 4)
+                td = trace_dir(out, sample.id, cond)
+                save_trace(
+                    td, sample_id=sample.id, condition=cond, input_ids=rp.input_ids, routing=tr.routing,
+                    activations=tr.activations, attention=tr.attention,
+                    extra={"prompt_text": rp.text, "spans": record["spans"],
+                           "message_token_spans": record["message_token_spans"],
+                           "prefill_argmax_token_id": tr.next_token_id},
+                )
+                record["trace_dir"] = str(td.relative_to(out))
+                record["routing_source"] = tr.routing.source
+                record["prefill_argmax_token_id"] = tr.next_token_id
+            records.append((sample, record))
+            chunk_ids.append(rp.input_ids)
 
         if cfg.generation.enabled:
             torch.manual_seed(cfg.seed)
             _sync(device)
             t0 = time.perf_counter()
-            with torch.inference_mode():
-                gen = model.generate(input_ids=ids, attention_mask=torch.ones_like(ids), generation_config=gc)
+            responses = generate_batch(model, chunk_ids, gc, device)
             _sync(device)
             dt_gen = time.perf_counter() - t0
-            resp = gen[0, ids.shape[1]:].tolist()
-            raw = tok.decode(resp, skip_special_tokens=False)
-            text = tok.decode(resp, skip_special_tokens=True)
-            thinking, answer = split_response(tok, resp, text)
-            record.update({
-                "response_text": text,
-                "response_text_raw": raw,
-                "response_thinking": thinking,
-                "response_answer": answer,
-                "response_ids": resp,
-                "num_generated_tokens": len(resp),
-                "finish_reason": "eos" if resp and resp[-1] in eos else "length",
-            })
-            timing["generate_s"] = round(dt_gen, 4)
-            timing["generated_tokens_per_s"] = round(len(resp) / dt_gen, 2) if dt_gen > 0 else None
-            if "prefill_argmax_token_id" in record and resp:
-                record["first_token_matches_prefill"] = resp[0] == record["prefill_argmax_token_id"]
-            target = sample.evaluation.get("attack_target")
-            if isinstance(target, str) and target:
-                # Naive case-insensitive substring check; a convenience, not an attack-success judge.
-                record["attack_target_in_response"] = target.lower() in record["response_text"].lower()
-                # For reasoning models the thinking may merely *mention* the target; judge the answer separately.
-                record["attack_target_in_answer"] = target.lower() in answer.lower()
-        record["timing"] = timing
-        if device.type == "cuda":
-            record["peak_gpu_memory_gb"] = round(torch.cuda.max_memory_allocated(device) / 1e9, 3)
-        append_jsonl(gen_path, record)
-        log.info(
-            "[%d/%d] %s/%s: %d prompt tokens%s", n, len(todo), sample.id, cond, len(rp.input_ids),
-            f", {record['num_generated_tokens']} generated ({record['finish_reason']})" if "response_ids" in record else "",
-        )
+            for (sample, record), resp in zip(records, responses):
+                raw = tok.decode(resp, skip_special_tokens=False)
+                text = tok.decode(resp, skip_special_tokens=True)
+                thinking, answer = split_response(tok, resp, text)
+                record.update({
+                    "response_text": text,
+                    "response_text_raw": raw,
+                    "response_thinking": thinking,
+                    "response_answer": answer,
+                    "response_ids": resp,
+                    "num_generated_tokens": len(resp),
+                    "finish_reason": "eos" if resp and resp[-1] in eos else "length",
+                    "generation_batch_size": len(chunk_ids),
+                })
+                record["timing"]["generate_batch_s"] = round(dt_gen, 4)
+                if "prefill_argmax_token_id" in record and resp:
+                    record["first_token_matches_prefill"] = resp[0] == record["prefill_argmax_token_id"]
+                target = sample.evaluation.get("attack_target")
+                if isinstance(target, str) and target:
+                    # Naive case-insensitive substring check; a convenience, not an attack-success judge.
+                    record["attack_target_in_response"] = target.lower() in record["response_text"].lower()
+                    # For reasoning models the thinking may merely *mention* the target; judge the answer separately.
+                    record["attack_target_in_answer"] = target.lower() in answer.lower()
+        for sample, record in records:
+            if device.type == "cuda":
+                record["peak_gpu_memory_gb"] = round(torch.cuda.max_memory_allocated(device) / 1e9, 3)
+            append_jsonl(gen_path, record)
+            n_done += 1
+            log.info(
+                "[%d/%d] %s/%s: %d prompt tokens%s", n_done, len(todo), sample.id, record["condition"],
+                record["num_prompt_tokens"],
+                f", {record['num_generated_tokens']} generated ({record['finish_reason']})" if "response_ids" in record else "",
+            )
 
     metadata["status"] = "complete"
     metadata["finished_at"] = _now()
