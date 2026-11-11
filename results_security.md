@@ -229,15 +229,55 @@ model is more likely to obey. "Routing mistakes data for instruction" is a weak,
 switch, which fits the null expert-ablation results. It is a correlation: step 4 found no causal handle in small
 expert sets.
 
-Caveat: both deltas reuse the injection condition. A bias from sampling noise should be small here (it would tend to be
-positive, not negative), but the clean test is to compute provenance on one half of the probes and obey on the other.
-That needs `features.npz`, which was not kept.
+Caveat: both deltas reuse the injection condition. The split-half re-test in G removes this: −0.13, and negative in
+200/200 splits.
 
 ### E · Fragility
 
 Batched generation picked a different first token than bs=1 prefill for 6% of injection prompts and 10% of trusted
 prompts. These prompts are executed slightly *less* often (54% vs 64%). Together with the 40% re-batching reproduction
 rate in step 4, this shows that many injection outcomes sit near a decision boundary.
+
+### G · Representation geometry: obeying tracks how strongly the injection registers, not "looking trusted"
+
+Script: [`experiments/sep_geometry.py`](experiments/sep_geometry.py), run on `features.npz`. Output:
+[`reports/mellum_sep/security/geometry/`](reports/mellum_sep/security/geometry/). All directions are fitted on held-out
+probes (GroupKFold by probe), and the labels are whole-word.
+
+![geometry](reports/mellum_sep/security/geometry/geometry.png)
+
+1. **The expert-space correlation in D survives a clean split-half test (panel B).** I computed the provenance delta on
+   one half of the probes and the obey delta on the other, so the two share no prompts. Over 200 random splits the mean
+   Spearman is **−0.13** (95% range −0.16 to −0.10), and **all 200 are below 0**. Obeyed injections are routed somewhat
+   more like trusted instructions. The effect is real but small.
+2. **Per item, "routed like its trusted twin" predicts obeying only modestly, and mostly through surface features
+   (panel A).** Each item's probe tokens are routed once in the data and once in the system prompt. The similarity of
+   the two routings (1 − Jensen–Shannon, layers 8–22) predicts obeying with AUC **0.65** (95% CI 0.60–0.70); the router
+   probabilities give 0.64. Projecting the gate input on a held-out "trusted − data" direction gives about 0.60. But
+   adding the routing similarity to surface features (insistent, position, data length, probe length) only moves a
+   grouped-CV model from **0.649 to 0.659**. The same similarity measured against a *benign* sentence also predicts
+   obeying (0.61), so part of it is generic.
+3. **At the decision point, obeying lines up with the "noticed" direction (panel C).** At the final prompt token:
+   - The obey direction (obeyed − ignored injections) has cosine **0.56–0.67** with the noticed direction
+     (injection − benign) in layers 6–27, well outside a label-permutation null (±0.25–0.47).
+   - A single held-out notice direction scores obeying with AUC **0.70** (CI 0.65–0.74, layer 22). That is nearly all of
+     the full 2,304-dim probe (0.74).
+   - It adds to surface features (0.649 → **0.706**) and holds **within the same probe text across different
+     documents** (0.60, over 82 probes with mixed outcomes).
+   - It is strongest for plain probes (0.71) and weaker for insistent ones (0.58).
+   - Obeyed injections sit *further* from the trusted-instruction state than ignored ones: cosine −0.3 to −0.5, around
+     the edge of its null; the held-out projection AUC is 0.37–0.41, i.e. inverted.
+
+**Reading.** Obeying is not mainly "the model mistook the injected text for a trusted instruction". It is "the injected
+instruction registered *more strongly*". The more salient its representation at the decision point, the more likely the
+model acts on it. This is consistent with C (it flags and complies), with step 2 (noticing is perfect), and with the
+longer-data effect. There is also a small, real routing tilt toward trusted-instruction experts (G1). That tilt is the
+part a routing-level defense could act on, but it is not the main driver.
+
+**For the security expert.** The notice direction is the strongest single handle we have. It is readable at the gate
+input on the probe tokens (AUC 1.0) and at the decision point. A security expert gated on it should *damp* instruction
+salience on data tokens rather than relabel provenance. A weight-free test of the same idea is ablating or
+negatively steering this direction on data tokens (roadmap #5). That needs a GPU and has not been run.
 
 ---
 
@@ -254,7 +294,9 @@ rate in step 4, this shows that many injection outcomes sit near a decision boun
 4. **Obeying is additive and "aware".** The model mostly does the task *and* the injected instruction, sometimes saying
    explicitly that the instruction came from the data. Longer data and insistent phrasing raise success, and routing
    injected tokens like trusted instructions correlates with obeying (layers 8–22). A defense therefore has to teach a
-   *policy* ("instructions found in data are not to be executed"), not repair a perception failure.
+   *policy* ("instructions found in data are not to be executed"), not repair a perception failure. At the
+   representation level, obeying tracks how *strongly* the injected instruction registers (the notice direction,
+   AUC 0.70 held out), more than whether it looks trusted.
 5. **Measured attack success is noisy at the item level.** About 60% of the obeys flip under re-batching. Single-run,
    per-item ASR numbers, including those used to select examples for defenses, should be reported with this in mind.
 
@@ -300,7 +342,7 @@ toolkit turns them into a causal account. In priority order (all need a GPU and 
 | 4 | **Direct logit attribution to the witness token** at the position where it is first generated: per expert and per head. | Which components *write* the injected answer? | Expert-level attribution is the most direct "is there an obey expert at write time" test, complementing our read-time null. |
 | 5 | **Difference-of-means "data-ness" direction.** Compute it at the gate input (provenance AUC 1.0) and add it to the probe tokens in the injected run. | Is there a single linear knob that reduces ASR without hurting utility? | The strongest weight-free baseline the trained expert has to beat. |
 | 6 | **Probe the decision during generation**, token by token, not only at the last prompt token. | When is the obey decision made? | The last-token probe was weak (0.74); step 4 patching says the decision forms later. |
-| 7 | **Split-half re-test of D**, plus attribution patching over all 1,792 experts. | Is "routed like an instruction → obeys" robust? | Cheap to run once `features.npz` exists again. |
+| 7 | **Attribution patching over all 1,792 experts** (split-half D is done: robust, small). | Which experts carry the routing tilt causally? | Picks where to insert the security expert. |
 
 Data and infrastructure:
 - Generate with vLLM and use HF only for the traced forward pass. Our 8.5 h run was dominated by HF batched decoding.
