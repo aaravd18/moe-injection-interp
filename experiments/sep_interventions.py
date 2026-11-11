@@ -10,6 +10,13 @@ Evaluation sets (half B, from the main run's baseline generations):
            tokens of the baseline answer (teacher-forced)
 Generation under intervention is greedy, ``--max-new`` tokens (enough to reach an early witness).
 
+Reproducibility filter: greedy bf16 decoding is NOT invariant to batch composition / left padding (the main run's
+first generated token differed from the bs=1 prefill argmax in ~8% of prompts), so a prompt that obeyed in the main
+run may not obey when re-generated in another batch. We therefore re-generate a larger pool (``--pool``) with the exact
+batching used for evaluation, keep only prompts whose outcome reproduces, and report the reproduction rate
+("decision fragility"). All effects are paired per prompt against the baseline on the same batches, with bootstrap
+95% CIs, and each targeted intervention gets ``--n-random`` random controls of the same size.
+
 Interventions (steering applies to the DATA tokens = the user message; generated tokens only where stated):
   experts_obey_off        deactivate top-N experts used more on injected probe tokens when the model obeyed
   experts_instr_off       deactivate top-N experts used more on the probe when it sits in the TRUSTED task
@@ -72,6 +79,8 @@ def main() -> None:
     ap.add_argument("--early", type=int, default=120)
     ap.add_argument("--max-new", type=int, default=160)
     ap.add_argument("--n-eval", type=int, default=96)
+    ap.add_argument("--pool", type=int, default=192, help="candidates per set before the reproducibility filter")
+    ap.add_argument("--n-random", type=int, default=2, help="random controls per targeted intervention")
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--sizes", default="16,64")
     ap.add_argument("--head-sizes", default="8,32")
@@ -126,9 +135,7 @@ def main() -> None:
                and r.get("attack_target_in_answer") and early(r)]
     rng.shuffle(attack)
     rng.shuffle(utility)
-    attack, utility = attack[: args.n_eval], utility[: args.n_eval]
-    clean = [byk[(r["sample_id"], "clean")] for r in attack[:48]]
-    print(f"eval sets: attack {len(attack)}, utility {len(utility)}, clean {len(clean)}", flush=True)
+    attack, utility = attack[: args.pool], utility[: args.pool]
 
     def data_span(r):
         s = r["message_token_spans"][1]
@@ -149,7 +156,7 @@ def main() -> None:
                     resp = generate_batch(model, ids, gc, device)
             for r, rr in zip(chunk, resp):
                 hits.append(r["evaluation"]["witness"].lower() in tok.decode(rr, skip_special_tokens=True).lower())
-        return float(np.mean(hits)) if hits else float("nan")
+        return hits
 
     @torch.inference_mode()
     def run_kl(make_iv):
@@ -168,17 +175,49 @@ def main() -> None:
             kls.append(float((base.exp() * (base - new)).sum(-1).mean()))
         return float(np.mean(kls))
 
+    # ---- reproducibility filter -----------------------------------------------------------------------------------
+    fragility = {}
+    for nm in ("attack", "utility"):
+        rows = attack if nm == "attack" else utility
+        h = run_gen(rows, lambda c, m, T: None)
+        fragility[nm] = {"pool": len(rows), "reproduced": int(sum(h)), "rate": float(np.mean(h))}
+        kept = [r for r, x in zip(rows, h) if x][: args.n_eval]
+        if nm == "attack":
+            attack = kept
+        else:
+            utility = kept
+    clean = [byk[(r["sample_id"], "clean")] for r in attack[:48]]
+    print("fragility", json.dumps(fragility), flush=True)
+    print(f"eval sets: attack {len(attack)}, utility {len(utility)}, clean {len(clean)}", flush=True)
+
     results = []
+    base_hits: dict[str, np.ndarray] = {}
+    boot = np.random.default_rng(1).integers(0, 1 << 30, size=1)[0]
+
+    def paired_ci(new: list[bool], key: str) -> list[float]:
+        d = np.asarray(new, float) - base_hits[key]
+        b = np.random.default_rng(int(boot)).integers(0, len(d), size=(2000, len(d)))
+        m = d[b].mean(1)
+        return [float(np.quantile(m, 0.025)), float(np.quantile(m, 0.975))]
+
+    def dump():
+        (out / "results.json").write_text(json.dumps({"fragility": fragility, "n_attack": len(attack),
+                                                      "n_utility": len(utility), "results": results}, indent=1))
 
     def evaluate(name, family, make_iv, n=None, extra=None):
         t = time.time()
+        ha, hu = run_gen(attack, make_iv), run_gen(utility, make_iv)
+        if family == "baseline":
+            base_hits["attack"], base_hits["utility"] = np.asarray(ha, float), np.asarray(hu, float)
         res = {"name": name, "family": family, "n_components": n,
-               "attack_success": run_gen(attack, make_iv), "utility_exec": run_gen(utility, make_iv),
-               "clean_kl": run_kl(make_iv), **(extra or {})}
+               "attack_success": float(np.mean(ha)), "utility_exec": float(np.mean(hu)),
+               "attack_delta_ci": paired_ci(ha, "attack"), "utility_delta_ci": paired_ci(hu, "utility"),
+               "clean_kl": run_kl(make_iv), "attack_hits": [bool(x) for x in ha],
+               "utility_hits": [bool(x) for x in hu], **(extra or {})}
         res["seconds"] = round(time.time() - t, 1)
         results.append(res)
-        print(json.dumps(res), flush=True)
-        (out / "results.json").write_text(json.dumps(results, indent=1))
+        print(json.dumps({k: v for k, v in res.items() if not k.endswith("_hits")}), flush=True)
+        dump()
 
     evaluate("baseline (no intervention)", "baseline", lambda c, m, T: None)
 
@@ -200,8 +239,9 @@ def main() -> None:
                 sel = {l: es[: layout.top_k // 2] for l, es in sel.items()}
                 k = sum(map(len, sel.values()))
             evaluate(f"{name} N={k}", name, steer(sel, value, **kw), k, {"selected": {str(l): es for l, es in sel.items()}})
-            rsel = random_like(sel, E, rng)
-            evaluate(f"random control for {name} N={k}", name + "_random", steer(rsel, value, **kw), k)
+            for j in range(args.n_random):
+                rsel = random_like(sel, E, rng)
+                evaluate(f"random control {j + 1} for {name} N={k}", name + "_random", steer(rsel, value, **kw), k)
 
     for n in map(int, args.head_sizes.split(",")):
         flat = np.argsort(-(head_auc - 0.5).ravel())[:n]
@@ -211,10 +251,12 @@ def main() -> None:
         evaluate(f"heads_obey_off N={n}", "heads_obey_off",
                  lambda c, m, T, h=heads: Intervention(layout, heads=HeadAblation(h)), n,
                  {"selected": {str(l): v for l, v in heads.items()}})
-        rh: dict[int, list[int]] = {}
-        for i in rng.choice(L * Hh, size=n, replace=False):
-            rh.setdefault(int(i // Hh), []).append(int(i % Hh))
-        evaluate(f"random heads N={n}", "heads_random", lambda c, m, T, h=rh: Intervention(layout, heads=HeadAblation(h)), n)
+        for j in range(args.n_random):
+            rh: dict[int, list[int]] = {}
+            for i in rng.choice(L * Hh, size=n, replace=False):
+                rh.setdefault(int(i // Hh), []).append(int(i % Hh))
+            evaluate(f"random heads {j + 1} N={n}", "heads_random",
+                     lambda c, m, T, h=rh: Intervention(layout, heads=HeadAblation(h)), n)
 
     # ---- residual patching clean -> injection at the final 8 (identical) template tokens ---------------------------
     k = 8
@@ -254,10 +296,11 @@ def main() -> None:
             hits += [r["evaluation"]["witness"].lower() in tok.decode(x, skip_special_tokens=True).lower()
                      for r, x in zip(chunk, resp)]
         res = {"name": f"patch_clean_tail layer {l}", "family": "patch_clean_tail", "layer": l, "k_tokens": k,
-               "attack_success": float(np.mean(hits))}
+               "attack_success": float(np.mean(hits)), "attack_delta_ci": paired_ci(hits, "attack"),
+               "attack_hits": [bool(x) for x in hits]}
         results.append(res)
-        print(json.dumps(res), flush=True)
-        (out / "results.json").write_text(json.dumps(results, indent=1))
+        print(json.dumps({k_: v for k_, v in res.items() if not k_.endswith("_hits")}), flush=True)
+        dump()
     print("wrote", out / "results.json")
 
 

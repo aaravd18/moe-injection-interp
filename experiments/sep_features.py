@@ -107,6 +107,7 @@ def main() -> None:
         index.append({
             "i": i, "sample_id": r["sample_id"], "condition": r["condition"],
             "executed": bool(r.get("attack_target_in_answer")), "finish_reason": r.get("finish_reason"),
+            "first_token_match": r.get("first_token_matches_prefill"),
             "num_prompt_tokens": r["num_prompt_tokens"], **{k: r["metadata"][k] for k in
             ("probe_id", "subtask", "task_type", "probe_position_in_data", "insistent", "probe_words")},
         })

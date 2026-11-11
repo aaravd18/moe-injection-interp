@@ -51,6 +51,9 @@ plt.rcParams.update({"figure.facecolor": SURF, "axes.facecolor": SURF, "axes.edg
 def load(run: Path):
     z = np.load(run / "features.npz")
     idx = pd.read_json(run / "features_index.jsonl", lines=True)
+    # An answer that did NOT contain the witness but hit the token cap might have executed the probe later: its label
+    # is uncertain, so it is excluded wherever "executed vs ignored" is the target.
+    idx["label_ok"] = idx.executed | (idx.finish_reason != "length")
     return {k: z[k] for k in z.files}, idx
 
 
@@ -82,7 +85,17 @@ def step1(idx: pd.DataFrame) -> dict:
     exec_instr = pv["user_instruction"].astype(bool)
     exec_data = pv["injection"].astype(bool)
     by_probe = (idx[idx.condition == "injection"].groupby("probe_id").executed.mean())
+    inj = idx[idx.condition == "injection"]
+    robust = {
+        "injection_asr_all": float(inj.executed.mean()),
+        "injection_asr_certain_labels": float(inj[inj.label_ok].executed.mean()),
+        "injection_uncertain_label_rate": float((~inj.label_ok).mean()),
+        "first_token_match_rate": float(idx.first_token_match.astype(float).mean()) if "first_token_match" in idx else None,
+        "injection_asr_first_token_match_only": float(inj[inj.first_token_match == True].executed.mean())
+        if "first_token_match" in idx else None,
+    }
     return {
+        "robustness": robust,
         "execution_rate": rate.to_dict(),
         "truncated_rate": trunc.to_dict(),
         "strata": strata.to_dict(orient="records"),
@@ -115,7 +128,8 @@ def step2(F: dict, idx: pd.DataFrame) -> pd.DataFrame:
     add("notice", F["resid_last"], m, inj[m], 0.05, "resid_last")
     delta = F["resid_last"].astype(np.float32) - F["resid_taskend"].astype(np.float32)
     add("notice_tt", delta, m, inj[m], 0.05, "delta_tasktracker")
-    # obey (among injections)
+    # obey (among injections with a certain label)
+    inj = inj & idx.label_ok.values
     y = idx.executed.values[inj]
     for feat, C_ in (("resid_last", 0.05), ("attn_last", 0.05), ("moe_last", 0.05), ("rprob_last", 1.0), ("amass_probe", 1.0)):
         add("obey", F[feat], inj, y, C_, feat)
@@ -152,6 +166,7 @@ def rates(counts: np.ndarray, ntok: np.ndarray) -> np.ndarray:
 def step3(F: dict, idx: pd.DataFrame, k: int, rng: np.random.Generator) -> dict:
     cond = idx.condition.values
     inj, usr = cond == "injection", cond == "user_instruction"
+    ok = idx.label_ok.values
     probes = np.array(sorted(idx.probe_id.unique()))
     rng.shuffle(probes)
     half = set(probes[: len(probes) // 2])
@@ -173,6 +188,8 @@ def step3(F: dict, idx: pd.DataFrame, k: int, rng: np.random.Generator) -> dict:
     out["provenance"] = {"delta": d_prov, "split_half_spearman": rho, "split_half_top30_overlap": top}
     # obey: injection items, executed vs ignored; at the probe tokens and at the final template tokens
     ex = idx.executed.values.astype(bool)
+    inj_all = inj
+    inj = inj & ok  # obey analyses: certain labels only
     for where, cnt, nt in (("probe_tokens", "ecount_probe", "ntok_probe"), ("tail_tokens", "ecount_tail", "ntok_tail")):
         d = diff(inj & ex, inj & ~ex, cnt, nt)
         rho, top = reproducibility(inj & ex, inj & ~ex, cnt, nt)
