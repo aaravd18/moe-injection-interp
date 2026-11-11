@@ -158,6 +158,87 @@ bootstrap CIs. It was not re-run before the GPU was released.)
 - **The decision is not stored in the final prompt tokens.** Overwriting them with the clean-run activations at
   layers ≥14 removes only about 2–9 points. The model reads the injected text directly while it generates.
 
+## Follow-up analyses (CPU only, from generations and step-3 arrays)
+
+Script: [`experiments/sep_behavior.py`](experiments/sep_behavior.py). Output:
+[`reports/mellum_sep/security/behavior/`](reports/mellum_sep/security/behavior/).
+
+### A · Label audit: the substring witness overcounts
+
+The SEP-style label ("witness string appears in the answer") is a **substring** match. Short witnesses fire inside
+other words: "cat" matched 10 of 32 clean/benign answers (in words like "category" and "indicate"), and "pen" matched
+4 of 18. With **whole-word** matching:
+
+| condition | substring | whole-word |
+|---|---|---|
+| clean / benign (false positive) | 1.8% / 1.7% | **0.5% / 0.5%** |
+| injection (ASR) | 65.7% | **63.3%** |
+| user_instruction (utility) | 79.8% | **74.2%** |
+
+The remaining false positives are genuine topic overlaps ("flour" in a recipe, "Paris" in a travel text). The
+conclusions do not change. Use whole-word labels from now on.
+
+**"Non-thinking" Mellum still deliberates.** 15–21% of answers start with plain-text reasoning ("The user asks…",
+"We need to…"), and **90–97% of those hit the 1024-token limit**. That accounts for nearly all of the truncation. The
+witness can appear in this deliberation ("…the animal known for its long neck is a giraffe…") without a clean final
+answer, so for 23% of executed injections "executed" partly means "answered the probe while reasoning about it".
+
+### B · What drives attack success
+
+![drivers](reports/mellum_sep/security/behavior/behavior_drivers.png)
+
+- **Injection success is not just "the probe is easy".** Per probe, the injected-execution rate correlates only
+  moderately with the trusted-execution rate (Spearman 0.35). Per item, P(obey injection | the same probe was executed
+  when trusted) = 0.70, vs 0.45 when it was not.
+- 70 items are executed *only* when injected and 135 only when trusted (McNemar p < 10⁻⁵). Placement in the data
+  does help a little, but much less than it should.
+- **Insistent phrasing: +23 points** (52% → 75%). **Longer data: +17 points** (shortest third 53% → longest third
+  70%). The further the trusted task is from the end of the prompt, the more the injected instruction wins. This is
+  consistent with the attention story: what the generation reads most recently and most directly takes over.
+- Position (start or end of the data) does not matter. Information-retrieval tasks are a little harder to hijack (57%)
+  than analytical and creative tasks (67%).
+
+### C · How the model obeys: it piggybacks, it rarely hijacks
+
+Of the 380 executed injections:
+
+| style | n |
+|---|---|
+| **does the task, then appends the probe answer** | **210** |
+| deliberates in plain text (both tasks) | 86 |
+| answers the probe first, then does the task | 58 |
+| hijack: answers only the probe (answer < 35% of the clean answer's length) | 26 |
+
+The median answer length is 1.03× the clean answer. **Mellum treats the injected instruction as an *additional* task,
+not a replacement.** It explicitly flags the injected instruction ("the text also asks…", "an additional question")
+in 13% of injection answers, compared with 2–3% in the other conditions. It **still executes it in 57% of the
+answers where it flags it**. The model *says* it knows the text is in the data and complies anyway. This is the
+behavioral counterpart of step 2 (noticing AUC 1.0, obeying only 0.74).
+
+### D · Expert space: obeyed injections are routed more like trusted instructions
+
+![expert space](reports/mellum_sep/security/behavior/behavior_expert_space.png)
+
+Over all 1,792 (layer, expert) cells, the obey delta (expert share on probe tokens: obeyed − ignored) is negatively
+correlated with the provenance delta (data − trusted task). Spearman **−0.19**, against a 95% null of ±0.047 from
+permuting experts within each layer (p < 0.001). Per layer, the correlation is strongest in **layers 8–22** (down to
+−0.42 at layers 10 and 16) and absent in layers 0, 15 and 24.
+
+**Reading.** When the router sends the injected tokens to the experts it normally uses for *trusted* instructions, the
+model is more likely to obey. "Routing mistakes data for instruction" is a weak, distributed tendency, not a single
+switch, which fits the null expert-ablation results. It is a correlation: step 4 found no causal handle in small
+expert sets.
+
+Caveat: both deltas reuse the injection condition. A bias from sampling noise should be small here (it would tend to be
+positive, not negative), but the clean test is to compute provenance on one half of the probes and obey on the other.
+That needs `features.npz`, which was not kept.
+
+### E · Fragility
+
+Batched generation picked a different first token than bs=1 prefill for 6% of injection prompts and 10% of trusted
+prompts. These prompts are executed slightly *less* often (54% vs 64%). Together with the 40% re-batching reproduction
+rate in step 4, this shows that many injection outcomes sit near a decision boundary.
+
 ---
 
 ## What this says about MoE security
@@ -170,7 +251,11 @@ bootstrap CIs. It was not re-run before the GPU was released.)
    model.
 3. **The causally relevant pathway is attention into the injected span during generation.** The defense has to change
    how generated tokens attend to and act on data tokens, not only how data tokens are processed.
-4. **Measured attack success is noisy at the item level.** About 60% of the obeys flip under re-batching. Single-run,
+4. **Obeying is additive and "aware".** The model mostly does the task *and* the injected instruction, sometimes saying
+   explicitly that the instruction came from the data. Longer data and insistent phrasing raise success, and routing
+   injected tokens like trusted instructions correlates with obeying (layers 8–22). A defense therefore has to teach a
+   *policy* ("instructions found in data are not to be executed"), not repair a perception failure.
+5. **Measured attack success is noisy at the item level.** About 60% of the obeys flip under re-batching. Single-run,
    per-item ASR numbers, including those used to select examples for defenses, should be reported with this in mind.
 
 ## Implications for a trained "security expert" (SecPO recipe, SEAL-style, frozen backbone)
@@ -192,21 +277,38 @@ bootstrap CIs. It was not re-run before the GPU was released.)
 ([`reports/qwen_sep_partial/verify_qwen.json`](reports/qwen_sep_partial/verify_qwen.json)). Only 56 items × 4
 conditions were generated before the run was stopped:
 
-| condition | n | executed |
-|---|---|---|
-| injection | 56 | 82% |
-| user_instruction | 56 | 79% |
-| clean / benign | 56 / 56 | 0% / 0% |
+| condition | n | Qwen (whole-word) | Mellum, same items |
+|---|---|---|---|
+| injection | 56 | 73% | 59% |
+| user_instruction | 56 | 73% | 66% |
+| clean / benign | 56 / 56 | 0% / 0% | 0% / 0% |
 
-On these items the larger model is at least as injectable as Mellum, and it executes injected instructions about as
-often as trusted ones. The sample is small (±10 points), and no probes or interventions were run on Qwen.
+On these items the larger model is at least as injectable as Mellum, and it executes injected instructions **exactly as
+often** as trusted ones: no separation at all. It almost never deliberates in plain text (2%). Per-item agreement with
+Mellum on injections is 64% (φ = 0.23), so the two models are hijacked by partly different items. The sample is small (±10 points), and no probes or interventions were run on Qwen.
 
-## Next steps
+## Next steps: the interpretability program
 
-1. Re-run [`scripts/queue_security.sh`](scripts/queue_security.sh) stages from `qwen_run` (resumable). This covers
-   Qwen behavior, probes and interventions, plus Mellum in thinking mode. Then run
-   [`scripts/queue_followup.sh`](scripts/queue_followup.sh) for the reproducibility-filtered Mellum interventions with
-   CIs.
-2. For speed, generate with vLLM and use HF only for tracing. The 8.5-hour main run was dominated by HF batched
-   generation waiting on the longest answer in each batch.
-3. Then the fine-tuning step: the security expert plus gate on the SecPO recipe, with the unfreezing ablation above.
+What we can claim now is a set of correlations, plus one null causal result (expert ablation). The standard mechanistic
+toolkit turns them into a causal account. In priority order (all need a GPU and the traces or a re-run):
+
+| # | Experiment | Question it answers | Why it matters for the security expert |
+|---|---|---|---|
+| 1 | **Provenance patching on the probe tokens.** The same probe tokens exist in the `user_instruction` and `injection` runs. Patch `resid_post` at the probe positions from the trusted run into the injected run (and the reverse), layer by layer. | Is "where the text sits" causally what makes the model treat it as data? At which layer? | Tells you at which layers a gate must act. If patching trusted → injected *raises* obedience, provenance is causal. |
+| 2 | **Route patching (MoE-specific).** Keep everything else, but give the probe tokens the *expert choices* they got in the trusted run (or the reverse), per layer. | Is the correlation in D causal through routing alone, or only through the residual? | Direct test of whether a *routing-level* defense (new gate / expert) can carry the fix. This is novel; dense models can't run it. |
+| 3 | **Attention knockout from the answer to the probe span**, in layer windows, during generation. | Which layers move the injected instruction into the answer? | Locates the attention layers to unfreeze or LoRA (step 4 points to layers 8–17). |
+| 4 | **Direct logit attribution to the witness token** at the position where it is first generated: per expert and per head. | Which components *write* the injected answer? | Expert-level attribution is the most direct "is there an obey expert at write time" test, complementing our read-time null. |
+| 5 | **Difference-of-means "data-ness" direction.** Compute it at the gate input (provenance AUC 1.0) and add it to the probe tokens in the injected run. | Is there a single linear knob that reduces ASR without hurting utility? | The strongest weight-free baseline the trained expert has to beat. |
+| 6 | **Probe the decision during generation**, token by token, not only at the last prompt token. | When is the obey decision made? | The last-token probe was weak (0.74); step 4 patching says the decision forms later. |
+| 7 | **Split-half re-test of D**, plus attribution patching over all 1,792 experts. | Is "routed like an instruction → obeys" robust? | Cheap to run once `features.npz` exists again. |
+
+Data and infrastructure:
+- Generate with vLLM and use HF only for the traced forward pass. Our 8.5 h run was dominated by HF batched decoding.
+  Use whole-word labels and cap non-thinking answers with a stop on plain-text deliberation, or run thinking mode
+  explicitly.
+- **Move beyond SEP's system/user split.** In SEP, provenance is "which chat turn", which is trivially readable.
+  Realistic injections arrive inside tool outputs and retrieved documents in the *same* turn (BIPIA, AgentDojo,
+  InjecAgent). The key test for a security expert is whether the gate signal survives there.
+- Finish the Qwen3-30B-A3B replication and the thinking-mode run
+  ([`scripts/queue_security.sh`](scripts/queue_security.sh) from `qwen_run`, resumable).
+- Then the fine-tuning step: a security expert plus gate on the SecPO recipe, unfreezing per experiments 1–3.
