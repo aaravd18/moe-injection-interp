@@ -279,6 +279,83 @@ input on the probe tokens (AUC 1.0) and at the decision point. A security expert
 salience on data tokens rather than relabel provenance. A weight-free test of the same idea is ablating or
 negatively steering this direction on data tokens (roadmap #5). That needs a GPU and has not been run.
 
+### H · Causal tests on the GPU: steering the injection direction (#5) and route patching (#2)
+
+Script: [`experiments/sep_steering.py`](experiments/sep_steering.py), using two new intervention types in
+[`moe_interp/interventions.py`](moe_interp/interventions.py) (`ResidSteer`, `RouteOverride`). Output:
+[`reports/mellum_sep/security/steering/`](reports/mellum_sep/security/steering/). Run on the DGX Spark on
+November 11, 2026, in 45 minutes.
+
+**Design.**
+- The direction at each layer is the difference of means at the gate input: injected-probe tokens minus
+  benign-sentence tokens. It is fitted on probe half A only and evaluated on half B prompts.
+- Prompts are kept only if their outcome reproduced under batched greedy decoding: 55 attacks (46% of the pool) and 74
+  trusted-instruction prompts (55%).
+- Effects are paired per prompt, with bootstrap 95% CIs.
+- **Control:** a random direction with typical activation variance (a random combination of centred activations), on
+  the same layers and tokens.
+- "Data tokens" means the whole user message (data plus injected probe), the prompt pass only. This is what a
+  provenance-gated security expert would see.
+- For the utility prompts, the trusted probe is in the system prompt and their data tokens are steered too, so a
+  selective defense must leave them working.
+
+![steering](reports/mellum_sep/security/steering/steering.png)
+
+| Condition | Attack success | Trusted executed | KL on clean |
+|---|---|---|---|
+| Baseline | 0.84 | 0.86 | 0 |
+| **Remove direction, data tokens, L8–22** | **0.47** (Δ −0.36 [−0.51, −0.20]) | **0.81** (Δ −0.05 [−0.15, +0.04]) | **0.012** |
+|   random direction | 0.55 | 0.64 (Δ −0.23) | 0.028 |
+| Flip direction (2× projection), data tokens, L8–22 | **0.36** (Δ −0.47) | 0.72 (Δ −0.15) | 0.016 |
+|   random direction | 0.47 | 0.55 (Δ −0.31) | 0.075 |
+| Remove, data tokens, all 28 layers | 0.35 | 0.69 | 0.042 |
+|   random direction | 0.02 | 0.31 | 1.06 (model breaks) |
+| Remove, **all tokens** incl. generated, L8–22 | 0.38 | **0.49** | 0.082 |
+|   random direction | 0.00 | 0.01 | 1.05 |
+| Remove final-token "noticed" direction, all tokens, L8–22 | 0.42 | 0.43 | 0.054 |
+|   random direction | 0.76 | 0.55 | 0.13 |
+
+Selectivity (trusted kept minus attack kept), targeted minus random, with paired bootstrap 95% CI:
+- data tokens, L8–22: **+0.25 [0.03, 0.46]**;
+- flip, data tokens: **+0.27 [0.07, 0.48]**;
+- all layers: +0.06 [−0.15, 0.24];
+- all tokens: +0.09 [−0.08, 0.27];
+- noticed direction: +0.23 [0.00, 0.45].
+
+**Route patching (#2).** I gave the injected probe tokens the experts their trusted twin chose (layers 8–22, and all
+layers), keeping the router's own weights for those experts. Top-k overlap between the two routings is 81%.
+
+| Condition | n | Result |
+|---|---|---|
+| attack, routes from trusted twin, L8–22 / all layers | 16 | 0.88 / 0.88 (baseline 0.81: **no reduction**) |
+| attack, own routes shuffled across probe tokens (control) | 16 | 0.50 |
+| attack, random experts (control) | 16 | 0.44 |
+| trusted, routes from injected twin, L8–22 | 37 | 0.84 (baseline 0.86: **no change**) |
+| trusted, own routes shuffled (control) | 37 | 0.62 |
+
+Only 16 attack and 37 trusted items have identical probe tokenization in both positions, so these are small samples.
+The pattern is still consistent in both directions: **swapping the provenance-specific expert choices does nothing,
+while generic route disruption does.**
+
+**Reading.**
+1. **The injection direction is causal, and gating it to data tokens is what makes it selective.**
+   - Removing one direction per layer, only on the untrusted message, at layers 8–22, cuts attack success from 84% to
+     47% while trusted-instruction execution stays within noise (86% → 81%) and clean outputs barely change
+     (KL 0.012).
+   - A random direction at the same place costs about four times more utility for a smaller attack reduction.
+   - The **same** direction removed from *all* tokens gives a similar attack reduction but halves trusted execution.
+   - So **where** you intervene (provenance gating) matters as much as **what** you remove. That is the core design
+     principle of the proposed security expert, and here it is demonstrated without any training.
+2. **The final-token "noticed" direction is causal but not selective.** Removing it everywhere lowers attacks and trusted
+   execution about equally. It encodes "act on the salient instruction" in general, so it is not something to remove
+   wholesale.
+3. **Routing itself does not carry obedience.** Expert choices on the injected tokens can be replaced with the trusted
+   ones (or the reverse) without changing behavior. The provenance information the router reflects lives in the
+   residual stream, which is what the steering acts on. Together with step 4's null expert ablations, this says the
+   MoE routing layer is a good *reader* of provenance (a gate can use it) but not where the decision is made.
+4. **Limits.** Steering leaves about half of the attacks working, the attack set is small (n=55), and "utility" only
+   checks that the trusted probe still gets executed, not the full task quality. This is a single model and dataset.
+
 ---
 
 ## What this says about MoE security
@@ -297,11 +374,17 @@ negatively steering this direction on data tokens (roadmap #5). That needs a GPU
    *policy* ("instructions found in data are not to be executed"), not repair a perception failure. At the
    representation level, obeying tracks how *strongly* the injected instruction registers (the notice direction,
    AUC 0.70 held out), more than whether it looks trusted.
-5. **Measured attack success is noisy at the item level.** About 60% of the obeys flip under re-batching. Single-run,
+5. **A weight-free, provenance-gated intervention works partially.** Removing one "instruction-in-data" direction on the
+   untrusted tokens only (layers 8–22) cuts attack success 84% → 47% with trusted execution intact. The same edit
+   applied everywhere costs half the utility. Swapping expert routes does nothing. (Section H.)
+6. **Measured attack success is noisy at the item level.** About 60% of the obeys flip under re-batching. Single-run,
    per-item ASR numbers, including those used to select examples for defenses, should be reported with this in mind.
 
 ## Implications for a trained "security expert" (SecPO recipe, SEAL-style, frozen backbone)
 
+- **Evidence it can work (section H).** A fixed, data-gated, rank-1 edit at layers 8–22 already removes ~40% of
+  attacks with no utility loss. A trained expert gated on provenance should be able to beat this baseline. Report it
+  as the baseline to beat.
 - **Gate signal: available.** Provenance is linearly separable (AUC 1.0) at the gate input in every layer, so a new
   gating parameter can learn to send data-span tokens to a security expert. The **middle layers (8–14)** are where the
   existing router already separates them most and are the natural place to insert it.
@@ -337,10 +420,10 @@ toolkit turns them into a causal account. In priority order (all need a GPU and 
 | # | Experiment | Question it answers | Why it matters for the security expert |
 |---|---|---|---|
 | 1 | **Provenance patching on the probe tokens.** The same probe tokens exist in the `user_instruction` and `injection` runs. Patch `resid_post` at the probe positions from the trusted run into the injected run (and the reverse), layer by layer. | Is "where the text sits" causally what makes the model treat it as data? At which layer? | Tells you at which layers a gate must act. If patching trusted → injected *raises* obedience, provenance is causal. |
-| 2 | **Route patching (MoE-specific).** Keep everything else, but give the probe tokens the *expert choices* they got in the trusted run (or the reverse), per layer. | Is the correlation in D causal through routing alone, or only through the residual? | Direct test of whether a *routing-level* defense (new gate / expert) can carry the fix. This is novel; dense models can't run it. |
+| 2 ✅ done (section H, small n) | **Route patching (MoE-specific).** Keep everything else, but give the probe tokens the *expert choices* they got in the trusted run (or the reverse), per layer. | Is the correlation in D causal through routing alone, or only through the residual? | Direct test of whether a *routing-level* defense (new gate / expert) can carry the fix. This is novel; dense models can't run it. |
 | 3 | **Attention knockout from the answer to the probe span**, in layer windows, during generation. | Which layers move the injected instruction into the answer? | Locates the attention layers to unfreeze or LoRA (step 4 points to layers 8–17). |
 | 4 | **Direct logit attribution to the witness token** at the position where it is first generated: per expert and per head. | Which components *write* the injected answer? | Expert-level attribution is the most direct "is there an obey expert at write time" test, complementing our read-time null. |
-| 5 | **Difference-of-means "data-ness" direction.** Compute it at the gate input (provenance AUC 1.0) and add it to the probe tokens in the injected run. | Is there a single linear knob that reduces ASR without hurting utility? | The strongest weight-free baseline the trained expert has to beat. |
+| 5 ✅ done (section H) | **Difference-of-means "data-ness" direction.** Compute it at the gate input (provenance AUC 1.0) and add it to the probe tokens in the injected run. | Is there a single linear knob that reduces ASR without hurting utility? | The strongest weight-free baseline the trained expert has to beat. |
 | 6 | **Probe the decision during generation**, token by token, not only at the last prompt token. | When is the obey decision made? | The last-token probe was weak (0.74); step 4 patching says the decision forms later. |
 | 7 | **Attribution patching over all 1,792 experts** (split-half D is done: robust, small). | Which experts carry the routing tilt causally? | Picks where to insert the security expert. |
 

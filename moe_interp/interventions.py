@@ -21,6 +21,18 @@ Head ablation
 Zeroes chosen heads' slices of ``attn_z`` (the input to ``o_proj``), i.e. removes those heads' contribution to the
 residual stream, at every position (prompt and generated).
 
+Direction steering
+------------------
+``ResidSteer`` edits ``resid_post`` of chosen layers along a unit direction ``d``: ``h <- h - coef * (h.d) d``
+(coef=1 projects the direction out, coef=2 reflects it) plus an optional ``add * d``. Applied on the prompt tokens in
+``token_mask`` (prefill) and, if ``decode``, on generated tokens.
+
+Route override
+--------------
+``RouteOverride`` replaces the experts chosen for masked prompt tokens with given expert ids (e.g. the routing the same
+tokens received in another context). The weights are the router's own probabilities for the new experts, renormalised
+like the model does. Only the prefill call is changed.
+
 Residual patching
 -----------------
 Replaces ``resid_post`` of a layer at the final ``k`` prompt positions with given values (prefill call only). With
@@ -63,11 +75,32 @@ class ResidPatch:
 
 
 @dataclass
+class ResidSteer:
+    directions: dict[int, torch.Tensor]
+    """layer -> [H] direction (normalised internally)"""
+    token_mask: torch.Tensor | None = None
+    """[B, S] bool over the padded prompt; None = all prompt tokens"""
+    coef: float = 1.0
+    add: float = 0.0
+    decode: bool = False
+
+
+@dataclass
+class RouteOverride:
+    ids: dict[int, torch.Tensor]
+    """layer -> [n, top_k] expert ids for the n masked tokens, in row-major (batch, position) order"""
+    token_mask: torch.Tensor
+    """[B, S] bool over the padded prompt, n True entries"""
+
+
+@dataclass
 class Intervention:
     layout: MoELayout
     experts: ExpertSteer | None = None
     heads: HeadAblation | None = None
     patch: ResidPatch | None = None
+    steer: ResidSteer | None = None
+    routes: RouteOverride | None = None
     _handles: list = field(default_factory=list)
     _calls: dict = field(default_factory=dict)
 
@@ -109,6 +142,57 @@ class Intervention:
 
         return hook
 
+    # ---- route override ------------------------------------------------------------------------------
+    def _route_hook(self, layer: int, new_ids: torch.Tensor):
+        L = self.layout
+
+        def hook(module, args, output):
+            key = ("route", layer)
+            first = self._calls.get(key, 0) == 0
+            self._calls[key] = self._calls.get(key, 0) + 1
+            if not first:
+                return None
+            if not isinstance(output, tuple):
+                raise RuntimeError("Route override needs a router returning (logits, weights, ids)")
+            logits, w, ids = output
+            rows = self.routes.token_mask.reshape(-1).to(logits.device)
+            if rows.numel() != logits.shape[0]:
+                raise RuntimeError(f"token_mask has {rows.numel()} entries but the prefill routed {logits.shape[0]}")
+            ids = ids.clone()
+            ids[rows] = new_ids.to(device=ids.device, dtype=ids.dtype)
+            probs = torch.softmax(logits.float(), dim=-1)
+            nw = probs.gather(-1, ids)
+            if L.norm_topk_prob:
+                nw = nw / nw.sum(-1, keepdim=True)
+            return (logits, nw.to(w.dtype), ids)
+
+        return hook
+
+    # ---- direction steering ------------------------------------------------------------------------
+    def _steer_hook(self, layer: int, d: torch.Tensor):
+        st = self.steer
+
+        def hook(module, args, output):
+            h = output[0] if isinstance(output, tuple) else output
+            key = ("steer", layer)
+            first = self._calls.get(key, 0) == 0
+            self._calls[key] = self._calls.get(key, 0) + 1
+            if not first and not st.decode:
+                return None
+            u = d.to(device=h.device, dtype=torch.float32)
+            u = u / u.norm()
+            hf = h.float()
+            delta = -st.coef * (hf @ u).unsqueeze(-1) * u + st.add * u
+            if first and st.token_mask is not None:
+                m = st.token_mask.to(h.device)
+                if m.shape != h.shape[:2]:
+                    raise RuntimeError(f"token_mask {tuple(m.shape)} does not match hidden {tuple(h.shape[:2])}")
+                delta = delta * m.unsqueeze(-1)
+            h = (hf + delta).to(h.dtype)
+            return (h,) + tuple(output[1:]) if isinstance(output, tuple) else h
+
+        return hook
+
     # ---- heads -------------------------------------------------------------------------------------
     def _head_hook(self, layer: int, heads: list[int]):
         d = self.layout.head_dim
@@ -147,6 +231,12 @@ class Intervention:
                     if hs:
                         self._handles.append(L.attentions[layer].o_proj.register_forward_pre_hook(
                             self._head_hook(layer, hs), with_kwargs=True))
+            if self.routes:
+                for layer, new in self.routes.ids.items():
+                    self._handles.append(L.routers[layer].register_forward_hook(self._route_hook(layer, new)))
+            if self.steer:
+                for layer, d in self.steer.directions.items():
+                    self._handles.append(L.layers[layer].register_forward_hook(self._steer_hook(layer, d)))
             if self.patch:
                 for layer, src in self.patch.values.items():
                     self._handles.append(L.layers[layer].register_forward_hook(self._patch_hook(layer, src)))

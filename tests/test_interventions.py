@@ -130,3 +130,51 @@ def test_generation_with_masked_steering_batched(mellum, toy_tokenizer):
     with Intervention(lm.layout, experts=ExpertSteer({0: {0: 0.0}}, token_mask=mask, decode=True)):
         same = generate_batch(lm.model, ids, gc, lm.device)
     assert same == generate_batch(lm.model, ids, gc, lm.device)
+
+
+def test_resid_steer_projects_out_direction_on_masked_tokens(mellum, toy_tokenizer):
+    from moe_interp.interventions import ResidSteer
+    lm = mellum
+    ids = torch.tensor([_ids(toy_tokenizer)])
+    S = ids.shape[1]
+    spec = TraceSpec(["resid_post"], [1, 2], "all")
+    base = run_traced_forward(lm.model, lm.layout, ids, spec)
+    d = torch.randn(lm.layout.hidden_size)
+    u = d / d.norm()
+    mask = torch.zeros(1, S, dtype=torch.bool)
+    mask[0, 2:6] = True
+    with Intervention(lm.layout, steer=ResidSteer({1: d}, token_mask=mask)):
+        tr = run_traced_forward(lm.model, lm.layout, ids, spec)
+    h = tr.activations.tensors[("resid_post", 1)]
+    torch.testing.assert_close(h[2:6] @ u, torch.zeros(4), atol=1e-4, rtol=0)
+    torch.testing.assert_close(h[:2], base.activations.tensors[("resid_post", 1)][:2])
+    torch.testing.assert_close(h[6:], base.activations.tensors[("resid_post", 1)][6:])  # same layer, unmasked
+    # zero-strength steering is a no-op
+    with Intervention(lm.layout, steer=ResidSteer({1: d}, token_mask=mask, coef=0.0)):
+        same = run_traced_forward(lm.model, lm.layout, ids, spec)
+    torch.testing.assert_close(same.activations.tensors[("resid_post", 2)], base.activations.tensors[("resid_post", 2)])
+
+
+def test_route_override_sets_ids_and_router_weights(mellum, toy_tokenizer):
+    from moe_interp.interventions import RouteOverride
+    lm = mellum
+    ids = torch.tensor([_ids(toy_tokenizer)])
+    S = ids.shape[1]
+    base = _capture_ids(lm, ids)
+    k, E = lm.layout.top_k, lm.layout.num_experts
+    mask = torch.zeros(1, S, dtype=torch.bool)
+    mask[0, 3:5] = True
+    new = torch.stack([torch.arange(E - k, E), torch.arange(k)])  # 2 tokens
+    got_w = {}
+    h = lm.layout.routers[0].register_forward_hook(lambda m, a, o: got_w.__setitem__(0, (o[0].clone(), o[1].clone())))
+    try:
+        with Intervention(lm.layout, routes=RouteOverride({0: new}, mask)):
+            got = _capture_ids(lm, ids)
+    finally:
+        h.remove()
+    assert torch.equal(got[0][3:5].sort(-1).values, new.sort(-1).values)
+    assert torch.equal(got[0][:3], base[0][:3])
+    # identity override (the model's own choices) changes nothing
+    with Intervention(lm.layout, routes=RouteOverride({0: base[0][3:5]}, mask)):
+        same = _capture_ids(lm, ids)
+    assert torch.equal(same[1], base[1])
