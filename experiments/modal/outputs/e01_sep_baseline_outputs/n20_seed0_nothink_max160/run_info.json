@@ -1,0 +1,53 @@
+{
+  "experiment": "e01_sep_baseline_outputs",
+  "run_utc": "2026-11-17T19:20:03+00:00",
+  "data": "data/sep_600.jsonl",
+  "n_items": 20,
+  "seed": 0,
+  "conditions": [
+    "clean",
+    "benign",
+    "injection",
+    "user_instruction"
+  ],
+  "item_ids": [
+    "sep_00737",
+    "sep_01579",
+    "sep_02111",
+    "sep_02127",
+    "sep_02257",
+    "sep_03313",
+    "sep_03865",
+    "sep_04014",
+    "sep_04333",
+    "sep_04634",
+    "sep_05387",
+    "sep_05737",
+    "sep_06113",
+    "sep_06472",
+    "sep_07269",
+    "sep_07442",
+    "sep_07760",
+    "sep_07901",
+    "sep_08206",
+    "sep_09108"
+  ],
+  "model": "JetBrains/Mellum2.1-12B-A2.5B-Thinking",
+  "requested_revision": "92ddae9fc7665e9f801d141d2e5a6b2caf2460c4",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "experts_implementation": "eager",
+  "device": "cuda",
+  "gpu_name": "NVIDIA L40S",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "thinking": false,
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  },
+  "max_new_tokens": 160,
+  "do_sample": false,
+  "batch_size": 40,
+  "load_seconds": 23.1,
+  "generate_seconds": 94.1
+}
