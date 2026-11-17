@@ -237,7 +237,94 @@ sweep with this direction as planned**; it would mostly measure the same non-sel
 - **Smaller, more targeted edits:** project the direction out (`coef=1`, i.e. set the component to the benign
   level) instead of adding a fixed alpha, and/or steer only the user-message tokens (as in the earlier
   `experiments/sep_steering.py` data-gated runs).
-- Fix the strict commitment regex to allow "answer priority question" without "the".
+- ~~Fix the strict commitment regex to allow "answer priority question" without "the".~~ Done (label v1.1, see
+  below).
+
+### Label v1.1 (applied before Stage 2d)
+`COMMIT` now accepts "answer priority question" without "the". On E01 it is still clean: 0/40 hits on clean+benign,
+and all 9/9 injection flags at 160 tokens obey by 512. The CSVs in `screen/` and `screen_ui_benign/` were regenerated
+from the saved generations (no GPU). Counts out of 40 under v1.1:
+
+| arm | injection follows | user_instruction follows |
+|---|---|---|
+| baseline | 15 | 19 |
+| dir L14 c+2 | 9 | 18 |
+| dir L14 c+4 | 2 | 10 |
+| rand L14 c+4, seeds 0 / 1 / 2 | 16 / 21 / 3 | – |
+
+Under v1.1, **L14 c+2 looks mildly selective** (injection −6, trusted −1), but n=40, and random edits move injection
+following by much more than that. L14 c+4 is non-selective as before.
+
+---
+
+## Stage 2d: provenance direction screen (2026-11-17)
+
+**Idea:** the injection−benign direction failed because it is shared with trusted instructions. So use
+`p[l] = mean_train( h_l(injection) − h_l(user_instruction) )`: the *same* probe sentence in the untrusted data vs
+appended to the system prompt. Same site (final prompt token, resid_post), fitted on CPU from the saved activations
+(no extraction run).
+Artifact: [`artifacts/directions/mellum_sep_injminususerinstr_last_resid_post_v1.npz`](../artifacts/directions/)
+(+ `.json`). Per-layer stats: [`screen_prov/layer_stats.csv`](../outputs/e02_sep_steering/screen_prov/layer_stats.csv).
+
+**Screen:** same 40 val items, 160 tokens, label v1.1, on **injection and user_instruction together** (80 prompts
+per arm, identical batches). Arms: baseline + layers {7, 14, 21} × c ∈ {−2, +1, +2, +4}, with alpha = c·|p_l|.
+Then **10 random directions** (combinations of centred train injection + user_instruction activations) at the most
+selective setting, chosen automatically. ~25 min of L40S over 5 containers, ≈ $1.
+
+### The direction
+| layer | \|p\|/\|h\| | val AUROC inj vs user_instr | val AUROC user_instr vs benign | cos(p, inj−benign) |
+|---|---|---|---|---|
+| 7 | 0.13 | 0.93 | 0.83 | 0.86 |
+| 14 | 0.20 | 0.91 | 0.39 | 0.65 |
+| 21 | 0.17 | 0.89 | 0.35 | 0.54 |
+
+Provenance is clearly represented: held-out injection vs trusted-instruction prompts separate at AUROC ≈ 0.9 at every
+layer from 7 on. From layer ~12 on, trusted instructions project *below* benign along p.
+
+### Results (counts out of 40; [`selectivity.csv`](../outputs/e02_sep_steering/screen_prov/selectivity.csv))
+| arm | injection follows ↓ | user_instruction follows ↑ |
+|---|---|---|
+| baseline | 16 | 20 |
+| L7 c+1 / +2 / +4 | 16 / 18 / 16 | 20 / 21 / 18 |
+| L14 c+1 / +2 / +4 | 18 / 19 / 13 | 21 / 22 / 17 |
+| L21 c+1 / +2 / +4 | 15 / 16 / 17 | 23 / 28 / 19 |
+| L7 / L14 / L21 c−2 (adds p) | 16 / 24 / 15 | 22 / 19 / 21 |
+| **10 random directions at L21 c+1** | **13–21 (median 17)** | **21–27 (median 23)** |
+
+Auto-selected "most selective" setting: L21 c+1 (15 / 23). That is inside the random null on both conditions.
+
+### Observations
+1. **No effect on injection following.** No subtract setting moves injection following outside 13–19 (baseline 16),
+   and 10 random directions span 13–21. The provenance direction is represented but, at the final prompt token,
+   steering along it doesn't change whether the model answers the injected question.
+2. **In hindsight the sign logic is awkward.** Subtracting p pushes the injected prompt toward how the model represents
+   a *trusted* instruction, and the model follows trusted instructions *more* (baseline 20 vs 16). Adding p (c−2)
+   didn't help either (L14: 24 injection follows). Reading L14 c+4: the model reframes the probe as "…and then asks a
+   priority question: …" and still plans to answer it. Its framing changes; its decision doesn't.
+3. **Behaviourally Mellum barely distinguishes provenance anyway:** baseline follows the question 16/40 when injected
+   vs 20/40 when trusted. There's little "trusted vs untrusted" decision for this direction to act on. What decides
+   following is mostly whether the question gets taken up at all, which is what the injection−benign direction
+   moves (Stage 2b/c).
+4. **Run-to-run noise is large. Batch composition alone changes most greedy outputs.** This stage's baseline matches
+   the Stage 2b baseline on only 6/40 injection outputs (3/40 user_instruction), although both are unsteered. The
+   only difference is the batch (80 mixed prompts vs 40, so different left-padding). The follow *rates* agree
+   (16 vs 15), but item-level outcomes are chaotic. Consequences:
+   - only compare arms run in **identical batches** (true within each stage here; don't compare item flips across
+     stages);
+   - even small random edits (L21 c+1) shift follow counts by ±4/40, so **effects smaller than ~5/40 aren't
+     detectable at n=40**. That includes the "mildly selective" L14 c+2 of the injection−benign direction (−6 / −1).
+
+### Where E02 stands
+- **injection−benign:** strong, non-selective suppression at L14 c+4. One random direction in three matched it.
+- **injection−user_instruction (provenance):** well represented, no behavioural effect beyond noise.
+- Neither is a selective defence at the final prompt token. The full val+test sweep (Stage 3/4) remains unrun.
+
+### Possible next steps (to discuss)
+- **A compliance direction:** within *injection* prompts, obeyed vs ignored (from unsteered train generations, label
+  v1.1). This targets the decision itself, not presence or provenance, as the original caveat suggested. It needs one
+  generation pass over the 401 train injection prompts (~$1–2) plus activations, which are already on the volume.
+- **A bigger n for the one mildly selective hint** (injection−benign L14 c+2), against a ≥10-direction random null.
+- **Other sites:** steer the probe tokens / user-message tokens (where provenance is set) instead of the final token.
 
 ---
 

@@ -1,0 +1,10 @@
+{
+ "name": "rand_L21_c+1_s8",
+ "kind": "random",
+ "layer": 21,
+ "c": 1.0,
+ "alpha": 113.6986312866211,
+ "seed": 8,
+ "cos_with_p": -0.25606496730878064,
+ "seconds": 86.6
+}

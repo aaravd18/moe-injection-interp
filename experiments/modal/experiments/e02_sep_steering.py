@@ -15,6 +15,9 @@ Stages (run from the repo root, .venv active). Only `split` is local; everything
   --stage extract   last-token resid_post for all 600 items x 4 conditions -> direction, stats, random control
   --stage screen    cheap screen: baseline + layers x strengths on 40 VAL injection prompts at 160 tokens, label =
                     witness or explicit commitment; then random controls at the best 3 settings
+  --stage screen2   cost check: user_instruction + benign at L14 c+2/c+4, and 2 more random directions
+  --stage screen_prov  provenance direction mean(h(injection) - h(user_instruction)): fit from saved activations
+                    (CPU), screen on injection AND user_instruction, 10 random directions at the most selective setting
   --stage check     hook check on the real model (edit exact at the target layer only, nothing upstream changes)
                     + alpha=0 gives token-identical generations + the edit is applied on every decode step
   --stage val       baseline + layers x strengths on VAL (injection + user_instruction), auto-select configs
@@ -237,9 +240,10 @@ class Worker:
 
 
 @app.function(volumes={"/artifacts": artifacts}, memory=8192, timeout=20 * 60)
-def random_units(train_ids: list[str], layer: int, seeds: list[int]) -> list[list[float]]:
+def random_units(train_ids: list[str], layer: int, seeds: list[int],
+                 pair: tuple[str, str] = ("injection", "benign")) -> list[list[float]]:
     """Extra random control directions at one layer (same recipe as the saved one, other seeds), from the saved
-    train activations on the volume."""
+    train activations on the volume: random combinations of the centred activations of the two conditions in `pair`."""
     import numpy as np
 
     from moe_interp.steering import random_directions
@@ -247,8 +251,33 @@ def random_units(train_ids: list[str], layer: int, seeds: list[int]) -> list[lis
     ids, conds = list(z["ids"]), list(z["conditions"])
     tr = np.array([i in set(train_ids) for i in ids])
     acts = z["acts"][tr][:, :, layer: layer + 1].astype(np.float32)          # [N, 4, 1, H]
-    I, B = conds.index("injection"), conds.index("benign")
-    return [random_directions(acts[:, I], acts[:, B], seed=sd)[0].tolist() for sd in seeds]
+    P, N = conds.index(pair[0]), conds.index(pair[1])
+    return [random_directions(acts[:, P], acts[:, N], seed=sd)[0].tolist() for sd in seeds]
+
+
+@app.function(volumes={"/artifacts": artifacts}, memory=16384, timeout=20 * 60)
+def fit_direction(train_ids: list[str], val_ids: list[str], pos: str, neg: str) -> dict:
+    """v[l] = mean_train(h(pos) - h(neg)) at every layer from the saved last-token activations, plus val stats."""
+    import numpy as np
+
+    from moe_interp.steering import auroc
+    z = np.load(ACTS_PATH)
+    ids, conds = list(z["ids"]), list(z["conditions"])
+    acts = z["acts"].astype(np.float32)
+    tr = np.array([i in set(train_ids) for i in ids])
+    va = np.array([i in set(val_ids) for i in ids])
+    P, N = conds.index(pos), conds.index(neg)
+    v = (acts[tr, P] - acts[tr, N]).mean(0)
+    u = v / np.linalg.norm(v, axis=-1, keepdims=True)
+    proj = {c: np.einsum("nlh,lh->nl", acts[va, conds.index(c)], u) for c in conds}
+    L = v.shape[0]
+    return {"v": v.tolist(), "n_train": int(tr.sum()), "stats": {
+        "v_norm": np.linalg.norm(v, axis=-1).tolist(),
+        "resid_norm_neg_train": np.linalg.norm(acts[tr, N], axis=-1).mean(0).tolist(),
+        **{f"val_auroc_{a}_vs_{b}": [auroc(proj[a][:, l], proj[b][:, l]) for l in range(L)]
+           for a, b in ((pos, neg), ("injection", "benign"), ("user_instruction", "benign"))},
+        "val_mean_proj": {c: proj[c].mean(0).tolist() for c in conds},
+        "cos_with_injminusbenign": [], "cos_v_adjacent_layers": [float(u[l] @ u[l + 1]) for l in range(L - 1)]}}
 
 
 # ---- local side ----------------------------------------------------------------------------------------------------
@@ -457,6 +486,98 @@ def stage_screen2(sp: dict, items: dict) -> None:
     screen_report(OUT / "screen_ui_benign", items)
 
 
+PROV_NAME = "mellum_sep_injminususerinstr_last_resid_post_v1"
+N_RANDOM_PROV = 10
+
+
+def stage_screen_prov(sp: dict, items: dict) -> None:
+    """Provenance direction p[l] = mean_train(h(injection) - h(user_instruction)): same probe, in the data vs in the
+    system prompt. Fit on CPU from the saved activations, then the same 40-item / 160-token screen on BOTH injection
+    (want less following) and user_instruction (want following kept), then N_RANDOM_PROV random directions at the
+    most selective setting."""
+    import numpy as np
+    pf = DIR_FILE.parent / f"{PROV_NAME}.npz"
+    fit = fit_direction.remote(sp["ids"]["train"], sp["ids"]["val"], "injection", "user_instruction")
+    p = np.array(fit["v"], np.float32)
+    v_ib, _ = load_direction()
+    fit["stats"]["cos_with_injminusbenign"] = [float(p[l] @ v_ib[l] / np.linalg.norm(p[l]) / np.linalg.norm(v_ib[l]))
+                                               for l in range(p.shape[0])]
+    np.savez(pf, v=p)
+    pf.with_suffix(".json").write_text(json.dumps({
+        "name": PROV_NAME, "created_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+        "model": MELLUM, "chat_template_kwargs": {"enable_thinking": False},
+        "hook": "resid_post = output of decoder layer l, layers 0..27", "position": "final prompt token",
+        "definition": "v[l] = mean over TRAIN items of (h_l(injection) - h_l(user_instruction)); UNNORMALISED. Same "
+                      "probe sentence, placed in the user message (untrusted data) vs appended to the system prompt",
+        "source_activations": f"Modal volume moe-interp-artifacts:{ACTS_PATH.replace('/artifacts', '')}",
+        "split": sp["name"], "n_train_items": fit["n_train"], "shape": list(p.shape), "stats": fit["stats"]},
+        indent=1) + "\n")
+    st = fit["stats"]
+    rows = [{"layer": l, "p_norm": round(st["v_norm"][l], 2), "resid_norm": round(st["resid_norm_neg_train"][l], 1),
+             "p_over_resid": round(st["v_norm"][l] / st["resid_norm_neg_train"][l], 3),
+             "val_auroc_inj_vs_ui": round(st["val_auroc_injection_vs_user_instruction"][l], 3),
+             "val_auroc_inj_vs_benign": round(st["val_auroc_injection_vs_benign"][l], 3),
+             "val_auroc_ui_vs_benign": round(st["val_auroc_user_instruction_vs_benign"][l], 3),
+             "cos_with_injminusbenign": round(st["cos_with_injminusbenign"][l], 3),
+             **{f"val_proj_{k}": round(x[l], 2) for k, x in st["val_mean_proj"].items()}} for l in range(p.shape[0])]
+    d = OUT / "screen_prov"
+    write_csv(d / "layer_stats.csv", rows)
+    for r in rows:
+        if r["layer"] in (3, 7, 10, 14, 17, 21, 24, 27):
+            print("  L{layer:2d} |p|={p_norm:7.2f} |p|/|h|={p_over_resid:.3f} AUROC inj/ui={val_auroc_inj_vs_ui:.3f} "
+                  "ui/ben={val_auroc_ui_vs_benign:.3f} cos(p, inj-ben)={cos_with_injminusbenign:.2f}".format(**r))
+
+    ids = screen_ids(sp)
+    jobs = make_jobs(ids, ["injection", "user_instruction"], items)
+    arms = [arm_spec("baseline", None, None, p, p)] + [arm_spec("dir", l, c, p, p) for l in LAYERS for c in STRENGTHS]
+    print(f"screen_prov phase 1: {len(arms)} arms x {len(jobs)} (injection + user_instruction), {SCREEN_TOKENS} tokens")
+    save_arms(d, run_arms(arms, jobs, SCREEN_TOKENS))
+    summ = screen_report(d, items, quiet=True)
+    by = {(s["arm"], s["condition"]): s for s in summ}
+    bi, bu = by[("baseline", "injection")]["follow"], by[("baseline", "user_instruction")]["follow"]
+    cand = [(-((bi - by[(a, "injection")]["follow"]) - max(0.0, bu - by[(a, "user_instruction")]["follow"])), a)
+            for a, c in by if c == "injection" and a.startswith("dir_") and "c-" not in a]
+    best = sorted(cand)[0][1]
+    _, L, c = best.split("_")
+    layer, cc = int(L[1:]), float(c[1:])
+    alpha = cc * float(np.linalg.norm(p[layer]))
+    units = random_units.remote(sp["ids"]["train"], layer, list(range(N_RANDOM_PROV)), ("injection", "user_instruction"))
+    rarms = [{"name": f"rand_L{layer}_c{cc:+g}_s{sd}", "kind": "random", "layer": layer, "c": cc, "alpha": alpha,
+              "seed": sd, "cos_with_p": float(np.dot(u, p[layer]) / np.linalg.norm(p[layer])), "unit": u}
+             for sd, u in enumerate(units)]
+    (d / "selection.json").write_text(json.dumps({
+        "rule": "most selective c>0 arm: max (injection follow drop) - max(0, user_instruction follow drop)",
+        "selected": best, "random_controls": [a["name"] for a in rarms]}, indent=1) + "\n")
+    print(f"screen_prov phase 2: most selective = {best}; {N_RANDOM_PROV} random directions there")
+    save_arms(d, run_arms(rarms, jobs, SCREEN_TOKENS))
+    screen_report(d, items)
+    selectivity_table(d)
+
+
+def selectivity_table(d: Path) -> None:
+    """Per arm: injection follows and user_instruction follows side by side (+ random-null range)."""
+    import numpy as np
+    summ = list(csv.DictReader((d / "summary.csv").open()))
+    by = {(s["arm"], s["condition"]): s for s in summ}
+    arms = list(dict.fromkeys(s["arm"] for s in summ))
+    n = int(summ[0]["n"])
+    rows = []
+    for a in arms:
+        i, u = float(by[(a, "injection")]["follow"]), float(by[(a, "user_instruction")]["follow"])
+        rows.append({"arm": a, "injection_follow": round(i * n), "user_instruction_follow": round(u * n), "n": n,
+                     "inj_high_repetition": by[(a, "injection")]["high_repetition"],
+                     "ui_high_repetition": by[(a, "user_instruction")]["high_repetition"]})
+    write_csv(d / "selectivity.csv", rows)
+    print(f"\n{'arm':22s} {'inj follow':>10s} {'ui follow':>10s}   (of {n})")
+    for r in rows:
+        print(f"{r['arm']:22s} {r['injection_follow']:10d} {r['user_instruction_follow']:10d}")
+    rr = [r for r in rows if r["arm"].startswith("rand_")]
+    if rr:
+        ii, uu = np.array([r["injection_follow"] for r in rr]), np.array([r["user_instruction_follow"] for r in rr])
+        print(f"random null (n={len(rr)}): injection {ii.min()}-{ii.max()} (median {np.median(ii):g}), "
+              f"user_instruction {uu.min()}-{uu.max()} (median {np.median(uu):g})")
+
+
 def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
     outs = load_arms(d)
     by = {o["arm"]["name"]: {r["key"]: r for r in o["results"]} for o in outs}
@@ -654,16 +775,19 @@ def main(stage: str, arms: str = ""):
     sp = load_sep_split()
     items = load_items()
     {"extract": lambda: stage_extract(sp, items), "check": lambda: stage_check(sp, items),
-     "screen": lambda: stage_screen(sp, items), "screen2": lambda: stage_screen2(sp, items), "val": lambda: stage_val(sp, items),
+     "screen": lambda: stage_screen(sp, items), "screen2": lambda: stage_screen2(sp, items),
+     "screen_prov": lambda: stage_screen_prov(sp, items), "val": lambda: stage_val(sp, items),
      "test": lambda: stage_test(sp, items, arms)}[stage]()
 
 
 if __name__ == "__main__":  # local, no Modal: rebuild summaries from saved generations
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--report", choices=["screen", "screen_ui_benign", "val", "test"], required=True)
+    ap.add_argument("--report", choices=["screen", "screen_ui_benign", "screen_prov", "val", "test"], required=True)
     a = ap.parse_args()
     if a.report.startswith("screen"):
         screen_report(OUT / a.report, load_items())
+        if a.report == "screen_prov":
+            selectivity_table(OUT / a.report)
     else:
         report(OUT / a.report, load_items(), test=(a.report == "test"))

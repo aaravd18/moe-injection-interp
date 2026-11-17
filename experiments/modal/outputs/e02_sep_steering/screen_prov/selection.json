@@ -1,0 +1,16 @@
+{
+ "rule": "most selective c>0 arm: max (injection follow drop) - max(0, user_instruction follow drop)",
+ "selected": "dir_L21_c+1",
+ "random_controls": [
+  "rand_L21_c+1_s0",
+  "rand_L21_c+1_s1",
+  "rand_L21_c+1_s2",
+  "rand_L21_c+1_s3",
+  "rand_L21_c+1_s4",
+  "rand_L21_c+1_s5",
+  "rand_L21_c+1_s6",
+  "rand_L21_c+1_s7",
+  "rand_L21_c+1_s8",
+  "rand_L21_c+1_s9"
+ ]
+}
