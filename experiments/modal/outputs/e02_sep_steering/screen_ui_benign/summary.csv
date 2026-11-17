@@ -1,0 +1,7 @@
+arm,condition,n,follow,witness,commit,stopped_following,started_following,notices,starts_with_planning,eos_rate,high_repetition,identical_to_baseline
+baseline,user_instruction,40,0.45,0.3,0.2,0,0,0.05,0.75,0.175,0.025,1.0
+baseline,benign,40,0.0,0.0,0.0,0,0,0.025,0.825,0.15,0.0,1.0
+dir_L14_c+2,user_instruction,40,0.375,0.35,0.125,4,1,0.0,0.85,0.1,0.0,0.0
+dir_L14_c+2,benign,40,0.0,0.0,0.0,0,0,0.0,0.825,0.125,0.0,0.0
+dir_L14_c+4,user_instruction,40,0.175,0.1,0.1,13,2,0.0,0.8,0.05,0.0,0.0
+dir_L14_c+4,benign,40,0.0,0.0,0.0,0,0,0.0,0.725,0.05,0.0,0.0

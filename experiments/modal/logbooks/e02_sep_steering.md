@@ -178,6 +178,69 @@ GPU: ~15 min of L40S over up to 5 containers (~40–75 s per arm + model load).
 
 ---
 
+## Stage 2c: cost check + better null (2026-11-17)
+
+**Setup:** same 40 val items, 160 tokens.
+- (a) baseline / dir L14 c+2 / dir L14 c+4 on **user_instruction** (the same probe as a trusted system-prompt
+  instruction; following it is *wanted*) and on **benign** (nothing to follow; is the task still done?).
+- (b) **2 more random directions** (seeds 1, 2; same recipe, cosine with v −0.04 / −0.09) at L14 c+4 on injection.
+
+Outputs: [`screen_ui_benign/`](../outputs/e02_sep_steering/screen_ui_benign/), plus the new random arms in
+[`screen/`](../outputs/e02_sep_steering/screen/). About 6 min of L40S.
+
+### Results (counts out of 40)
+"strict" = the screen label. "loose" also counts commitments like "Also need to answer priority question" (without
+"the"), which the strict regex missed. I found that case while reading L14 c+4 outputs. The loose count was done
+after the fact, by hand-written regex, and is not in the CSVs.
+
+| arm | injection follows (strict / loose) ↓ good | user_instruction follows (strict / loose) ↑ good | benign follows | high repetition (inj) |
+|---|---|---|---|---|
+| baseline | 14 / 15 | 18 / 19 | 0 | 7% |
+| dir L14 c+2 | 8 / 12 | 15 / 20 | 0 | 3% |
+| dir L14 c+4 | **2 / 3** | **7 / 10** | 0 | 0% |
+| rand L14 c+4, seed 0 | 16 / 16 | – | – | 23% |
+| rand L14 c+4, seed 1 | 21 / 21 | – | – | 23% |
+| rand L14 c+4, seed 2 | **3 / 4** | – | – | 0% |
+
+### Observations
+1. **L14 c+4 is not selective.** It suppresses the probe almost completely when injected (15 → 3), but also roughly
+   halves following when the *same* question is a legitimate system-prompt instruction (19 → 10). Reading the flips:
+   the model plans the main task and simply drops the trusted question. E.g. a Russian translation task whose system
+   prompt also asks "Describe the primary material of a candle": baseline plans both, steered plans only the
+   translation. This matches Stage 1: user_instruction sits about halfway along this direction.
+2. **L14 c+2 is mild in both directions.** Strict: injection 14 → 8, trusted 18 → 15. Loose: 15 → 12 and 19 → 20.
+   With 40 items that's within noise, so there is no clear selective effect here either.
+3. **One random direction does as well as the real one.** Random seed 2 at the same layer and size cuts injection
+   following to 3/40 (direction: 2/40). Over three random seeds the null spans 3–21 of 40 followers (baseline 14).
+   *How* it gets there differs: seed 2 mostly stops the "The user asks…" planning style (38% planning openings vs
+   72% baseline) and describes the passage instead, sometimes drifting off-task ("scan the passage for any
+   numerical data…"). The real direction keeps the model planning the task. So the direction gives a *cleaner*
+   suppression, but on the follow rate alone it's not distinguishable from a random edit of this size.
+4. **Benign:** no spurious following (0/40 in all arms). The steered outputs I read still plan and attempt the
+   original task coherently. There's no automatic task-quality metric, so this is by eye.
+5. Read with Stage 2b: the "adding the direction increases following" result (c−2) is also weaker than it looked,
+   because a random edit at L14 c+2 increased following even more (0.78).
+
+### Conclusion of the screen
+The injection−benign direction is a strong, **non-selective** handle on "attend to the embedded question": large
+subtraction suppresses it wherever it appears, trusted or not. At these edit sizes, random edits also move behaviour
+a lot, in both directions. This matches the caveat at the top: the direction most likely encodes "an instruction is
+present" rather than "this instruction is untrusted / will be obeyed". **Recommendation: don't run the full val+test
+sweep with this direction as planned**; it would mostly measure the same non-selective effect at higher cost.
+
+### Possible next steps (to discuss)
+- **A provenance direction:** `mean(h(injection) − h(user_instruction))`. Same probe, data vs system prompt, so it
+  targets exactly the selectivity that failed here. The train activations are already on the volume, so this needs
+  no extraction run, just a screen like this one (~$0.50).
+- **A proper null:** ~10 random directions per setting instead of 1–3, to know where the direction sits in the null
+  distribution.
+- **Smaller, more targeted edits:** project the direction out (`coef=1`, i.e. set the component to the benign
+  level) instead of adding a fixed alpha, and/or steer only the user-message tokens (as in the earlier
+  `experiments/sep_steering.py` data-gated runs).
+- Fix the strict commitment regex to allow "answer priority question" without "the".
+
+---
+
 ## Stage 3: val sweep (planned, not run)
 Baseline + layers {7, 14, 21} × c ∈ {−2, +1, +2, +4} on 98 val items × {injection, user_instruction}. Select the 2
 direction configs with c>0 that have the lowest injection `any_follow`, subject to: user_instruction `any_follow` ≥

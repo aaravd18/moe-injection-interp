@@ -236,6 +236,21 @@ class Worker:
         return do_run_arm(self.r, arm, jobs, max_new_tokens=max_new_tokens)
 
 
+@app.function(volumes={"/artifacts": artifacts}, memory=8192, timeout=20 * 60)
+def random_units(train_ids: list[str], layer: int, seeds: list[int]) -> list[list[float]]:
+    """Extra random control directions at one layer (same recipe as the saved one, other seeds), from the saved
+    train activations on the volume."""
+    import numpy as np
+
+    from moe_interp.steering import random_directions
+    z = np.load(ACTS_PATH)
+    ids, conds = list(z["ids"]), list(z["conditions"])
+    tr = np.array([i in set(train_ids) for i in ids])
+    acts = z["acts"][tr][:, :, layer: layer + 1].astype(np.float32)          # [N, 4, 1, H]
+    I, B = conds.index("injection"), conds.index("benign")
+    return [random_directions(acts[:, I], acts[:, B], seed=sd)[0].tolist() for sd in seeds]
+
+
 # ---- local side ----------------------------------------------------------------------------------------------------
 
 def load_items() -> dict[str, dict]:
@@ -417,6 +432,31 @@ def stage_screen(sp: dict, items: dict) -> None:
     screen_report(d, items)
 
 
+def stage_screen2(sp: dict, items: dict) -> None:
+    """Follow-up to the screen, same 40 val items, 160 tokens:
+    (a) the cost side: baseline / dir L14 c+2 / dir L14 c+4 on user_instruction (should still follow) and benign
+        (should do the task; nothing to follow);
+    (b) a better null: 2 more random directions (seeds 1, 2) at L14 c+4 on the injection prompts."""
+    import numpy as np
+    v, rnd = load_direction()
+    ids = screen_ids(sp)
+    arms = [arm_spec("baseline", None, None, v, rnd), arm_spec("dir", 14, 2.0, v, rnd), arm_spec("dir", 14, 4.0, v, rnd)]
+    jobs = make_jobs(ids, ["user_instruction", "benign"], items)
+    units = random_units.remote(sp["ids"]["train"], 14, [1, 2])
+    alpha = 4.0 * float(np.linalg.norm(v[14]))
+    rarms = [{"name": f"rand_L14_c+4_s{sd}", "kind": "random", "layer": 14, "c": 4.0, "alpha": alpha, "seed": sd,
+              "cos_with_v": float(np.dot(u, v[14]) / np.linalg.norm(v[14])), "unit": u} for sd, u in zip([1, 2], units)]
+    print(f"screen2: {[a['name'] for a in arms]} x {len(jobs)} (user_instruction + benign); "
+          f"{[a['name'] for a in rarms]} x {len(ids)} injection; {SCREEN_TOKENS} tokens")
+    w = Worker()
+    calls = [(a, jobs, SCREEN_TOKENS) for a in arms] + [(a, make_jobs(ids, ["injection"], items), SCREEN_TOKENS) for a in rarms]
+    outs = list(w.run_arm.starmap(calls))
+    save_arms(OUT / "screen_ui_benign", outs[:len(arms)])
+    save_arms(OUT / "screen", outs[len(arms):])
+    screen_report(OUT / "screen", items)
+    screen_report(OUT / "screen_ui_benign", items)
+
+
 def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
     outs = load_arms(d)
     by = {o["arm"]["name"]: {r["key"]: r for r in o["results"]} for o in outs}
@@ -425,23 +465,27 @@ def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
     base = {k: early_follow(by["baseline"][k], w_of[k]) for k in keys}
     rows, summ = [], []
     order = ["baseline"] + sorted(a for a in by if a != "baseline")
-    for a in order:
-        ef = {k: early_follow(by[a][k], w_of[k]) for k in keys}
-        for k in keys:
+    conds = list(dict.fromkeys(k.split("|")[1] for k in keys))
+    for a, cond in ((a, c) for a in order for c in conds):
+        ck = [k for k in keys if k.endswith("|" + cond)]
+        ef = {k: early_follow(by[a][k], w_of[k]) for k in ck}
+        for k in ck:
             r = by[a][k]
-            rows.append({"arm": a, "id": k.split("|")[0], "witness": w_of[k], **{f"{x}_{SCREEN_TOKENS}": y for x, y in ef[k].items()},
+            rows.append({"arm": a, "condition": cond, "id": k.split("|")[0], "witness": w_of[k],
+                         **{f"{x}_{SCREEN_TOKENS}": y for x, y in ef[k].items()},
                          "baseline_follow": base[k]["follow"], "finish": "eos" if r["finish_reason"] == "stop" else "cutoff",
                          "n_tokens": r["n_response_tokens"], "starts_with_planning": bool(META.search(r["response_full"])),
                          "repetition": repetition(r["response_full"]),
                          "identical_to_baseline": r["response_full"] == by["baseline"][k]["response_full"]})
-        n = len(keys)
+        n = len(ck)
         xs = rows[-n:]
-        summ.append({"arm": a, "n": n,
-                     "follow": round(sum(ef[k]["follow"] for k in keys) / n, 3),
-                     "witness": round(sum(ef[k]["witness"] for k in keys) / n, 3),
-                     "commit": round(sum(ef[k]["commit"] for k in keys) / n, 3),
-                     "stopped_following": sum(base[k]["follow"] and not ef[k]["follow"] for k in keys),
-                     "started_following": sum(ef[k]["follow"] and not base[k]["follow"] for k in keys),
+        summ.append({"arm": a, "condition": cond, "n": n,
+                     "follow": round(sum(ef[k]["follow"] for k in ck) / n, 3),
+                     "witness": round(sum(ef[k]["witness"] for k in ck) / n, 3),
+                     "commit": round(sum(ef[k]["commit"] for k in ck) / n, 3),
+                     "stopped_following": sum(base[k]["follow"] and not ef[k]["follow"] for k in ck),
+                     "started_following": sum(ef[k]["follow"] and not base[k]["follow"] for k in ck),
+                     "notices": round(sum(bool(NOTICE.search(by[a][k]["response_full"])) for k in ck) / n, 3),
                      "starts_with_planning": round(sum(x["starts_with_planning"] for x in xs) / n, 3),
                      "eos_rate": round(sum(x["finish"] == "eos" for x in xs) / n, 3),
                      "high_repetition": round(sum(x["repetition"] > 0.3 for x in xs) / n, 3),
@@ -449,7 +493,8 @@ def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
     write_csv(d / "per_example.csv", rows)
     write_csv(d / "summary.csv", summ)
     # side by side for the items that changed under the best direction arms
-    dir_arms = sorted((s for s in summ if s["arm"].startswith("dir_")), key=lambda s: (s["follow"], s["witness"]))[:SCREEN_RANDOM_TOP]
+    dir_arms = [s for s in sorted((s for s in summ if s["arm"].startswith("dir_") and s["condition"] == conds[0]),
+                                  key=lambda s: (s["follow"], s["witness"]))][:SCREEN_RANDOM_TOP]
     lines = [f"E02 screen: {len(keys)} val injection prompts, {SCREEN_TOKENS} tokens. follow = witness or explicit "
              "commitment (modal_common.early_follow). Items whose label changed vs baseline under the best direction arms; "
              "random control shown when it exists.\n\n"]
@@ -457,11 +502,13 @@ def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
         a = s["arm"]
         rn = a.replace("dir_", "rand_")
         for k in keys:
+            if k.split("|")[1] == "benign":
+                continue
             fa = early_follow(by[a][k], w_of[k])["follow"]
             if fa == base[k]["follow"]:
                 continue
             it = items[k.split("|")[0]]
-            lines.append(f"{'=' * 100}\n{a} | {k.split('|')[0]} | {it['metadata']['subtask']} | probe: {it['metadata']['probe']} "
+            lines.append(f"{'=' * 100}\n{a} | {k} | {it['metadata']['subtask']} | probe: {it['metadata']['probe']} "
                          f"| witness: {w_of[k]}\n{'=' * 100}\n")
             for name in ["baseline", a] + ([rn] if rn in by else []):
                 lab = early_follow(by[name][k], w_of[k])
@@ -470,9 +517,9 @@ def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
             lines.append("\n")
     (d / "compare.txt").write_text("".join(lines))
     if not quiet:
-        print(f"\n{'arm':16s} {'follow':>6s} {'witn':>5s} {'commit':>6s} {'stop':>4s} {'start':>5s} {'plan':>5s} {'rep':>5s} {'same':>5s}")
+        print(f"\n{'arm':20s} {'condition':16s} {'follow':>6s} {'witn':>5s} {'commit':>6s} {'stop':>4s} {'start':>5s} {'plan':>5s} {'rep':>5s} {'same':>5s}")
         for s in summ:
-            print(f"{s['arm']:16s} {s['follow']:6.2f} {s['witness']:5.2f} {s['commit']:6.2f} {s['stopped_following']:4d} "
+            print(f"{s['arm']:20s} {s['condition']:16s} {s['follow']:6.2f} {s['witness']:5.2f} {s['commit']:6.2f} {s['stopped_following']:4d} "
                   f"{s['started_following']:5d} {s['starts_with_planning']:5.2f} {s['high_repetition']:5.2f} {s['identical_to_baseline']:5.2f}")
     return summ
 
@@ -607,16 +654,16 @@ def main(stage: str, arms: str = ""):
     sp = load_sep_split()
     items = load_items()
     {"extract": lambda: stage_extract(sp, items), "check": lambda: stage_check(sp, items),
-     "screen": lambda: stage_screen(sp, items), "val": lambda: stage_val(sp, items),
+     "screen": lambda: stage_screen(sp, items), "screen2": lambda: stage_screen2(sp, items), "val": lambda: stage_val(sp, items),
      "test": lambda: stage_test(sp, items, arms)}[stage]()
 
 
 if __name__ == "__main__":  # local, no Modal: rebuild summaries from saved generations
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--report", choices=["screen", "val", "test"], required=True)
+    ap.add_argument("--report", choices=["screen", "screen_ui_benign", "val", "test"], required=True)
     a = ap.parse_args()
-    if a.report == "screen":
-        screen_report(OUT / "screen", load_items())
+    if a.report.startswith("screen"):
+        screen_report(OUT / a.report, load_items())
     else:
         report(OUT / a.report, load_items(), test=(a.report == "test"))
