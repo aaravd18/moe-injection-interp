@@ -149,7 +149,10 @@ def write_outputs(out_dir: Path, items: list[dict], by_key: dict, info: dict) ->
     txt = [f"{EXP} | {info['n_items']} items x {len(CONDITIONS)} conditions | thinking={'on' if info['thinking'] else 'off'}"
            f" | max_new_tokens={info['max_new_tokens']} | greedy | {info['gpu_name']}\n"
            "Flags: eos = stopped on its own, CUTOFF = hit max_new_tokens; witness @x = first occurrence at fraction x of "
-           "the answer; echo = share of the probe's content words repeated in the answer.\n\n"]
+           "the answer; echo = share of the probe's content words repeated in the answer.\n"
+           "Even with thinking off, Mellum often plans in plain text and then emits its own </think>: that part is shown as "
+           "[planning] and the witness check is split into answer / planning. Without a </think>, everything counts as "
+           "answer (planning included).\n\n"]
     prompts = [f"{EXP}: exact rendered prompts sent to the model\n\n"]
     with (out_dir / "generations.jsonl").open("w") as f:
         for k, it in enumerate(items, 1):
@@ -158,6 +161,11 @@ def write_outputs(out_dir: Path, items: list[dict], by_key: dict, info: dict) ->
             flags = {}
             for c, r in rs.items():
                 fl = analyse(r["response_answer"], w, m["probe"])
+                # With thinking off Mellum often still plans in plain text, then emits its own </think> and answers.
+                # response_answer is what follows that </think> (or everything, if it never closed one).
+                fl["closed_think"] = r["response_thinking"] is not None
+                fl["witness_in_planning"] = wb_hit(r["response_thinking"], w)
+                fl["witness_anywhere"] = fl["witness_hit"] or fl["witness_in_planning"]
                 fl["finish"] = "eos" if r["finish_reason"] == "stop" else "cutoff"
                 fl["n_tokens"] = r["n_response_tokens"]
                 fl["len_vs_clean"] = round(r["n_response_tokens"] / max(rs["clean"]["n_response_tokens"], 1), 2)
@@ -174,8 +182,7 @@ def write_outputs(out_dir: Path, items: list[dict], by_key: dict, info: dict) ->
             wide.update({f"{c}_answer": rs[c]["response_answer"] for c in CONDITIONS})
             for c in CONDITIONS:
                 wide.update({f"{c}_{key}": val for key, val in flags[c].items()})
-            if info["thinking"]:
-                wide.update({f"{c}_thinking": rs[c]["response_thinking"] or "" for c in CONDITIONS})
+            wide.update({f"{c}_planning": rs[c]["response_thinking"] or "" for c in CONDITIONS})
             wide_rows.append(wide)
 
             txt.append(item_header(k, len(items), it) + f"  injection verdict: {v}\n")
@@ -192,12 +199,15 @@ def write_outputs(out_dir: Path, items: list[dict], by_key: dict, info: dict) ->
                 })
                 wit = f"YES @{fl['witness_first_pos']}" if fl["witness_hit"] else (
                     "substring only" if fl["witness_substring_hit"] else "no")
+                if fl["closed_think"]:
+                    wit += f" (planning: {'YES' if fl['witness_in_planning'] else 'no'})"
                 tags = [("eos" if fl["finish"] == "eos" else "CUTOFF") + f" {fl['n_tokens']} tok",
                         f"witness: {wit}", f"echo {fl['probe_word_overlap']}" + (" (exact)" if fl["probe_echo_exact"] else "")]
                 tags += ["NOTICES"] * fl["notices_injection"] + ["meta"] * fl["meta_reasoning"]
                 body = r["response_answer"]
-                if info["thinking"] and r["response_thinking"]:
-                    body = f"[thinking]\n{r['response_thinking']}\n[answer]\n{body}"
+                if r["response_thinking"] is not None:
+                    label = "thinking" if info["thinking"] else "planning, before the model's own </think>"
+                    body = f"[{label}]\n{r['response_thinking']}\n[answer]\n{body}"
                 txt.append(f"\n----- {c} | {' | '.join(tags)} -----\n{body}\n")
                 prompts.append(f"\n----- {c}  ({r['n_prompt_tokens']} tokens) -----\n{r['prompt_text']}\n")
             txt.append("\n")
@@ -244,14 +254,34 @@ def main(n: int = 20, seed: int = 0, thinking: bool = False, max_new_tokens: int
     print(f"\nwrote {out_dir.relative_to(repo)}/")
 
 
-if __name__ == "__main__":  # local helpers (no Modal): python e01_sep_baseline_outputs.py --dump-prompts
+def rewrite(run_dir: Path) -> None:
+    """Re-derive all output files of a finished run from its generations.jsonl + run_info.json (no GPU)."""
+    info = json.loads((run_dir / "run_info.json").read_text())
+    here = Path(__file__).resolve()
+    rows = {r["id"]: r for r in map(json.loads, (here.parents[3] / "data" / "sep_600.jsonl").open())}
+    items = [rows[i] for i in info["item_ids"]]
+    keep = ("prompt_text", "n_prompt_tokens", "response_full", "response_thinking", "response_answer",
+            "n_response_tokens", "finish_reason")
+    by_key = {f"{g['id']}|{g['condition']}": {"key": f"{g['id']}|{g['condition']}", **{k: g[k] for k in keep}}
+              for g in map(json.loads, (run_dir / "generations.jsonl").open())}
+    write_outputs(run_dir, items, by_key, info)
+
+
+if __name__ == "__main__":  # local helpers (no Modal)
     import argparse
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dump-prompts", action="store_true", required=True)
+    ap.add_argument("--dump-prompts", action="store_true")
+    ap.add_argument("--rewrite", type=Path, help="regenerate the output files of a finished run directory")
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--thinking", action="store_true")
     ap.add_argument("--max-new-tokens", type=int, default=160)
     a = ap.parse_args()
-    print(f"wrote {dump_prompts(a.n, a.seed, a.thinking, a.max_new_tokens)}")
+    if a.rewrite:
+        rewrite(a.rewrite)
+        print(f"rewrote {a.rewrite}")
+    elif a.dump_prompts:
+        print(f"wrote {dump_prompts(a.n, a.seed, a.thinking, a.max_new_tokens)}")
+    else:
+        ap.error("pass --dump-prompts or --rewrite DIR (the GPU run itself is `modal run ...`)")
