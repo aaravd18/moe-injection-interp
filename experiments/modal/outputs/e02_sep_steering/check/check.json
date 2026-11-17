@@ -1,0 +1,41 @@
+{
+ "items": [
+  "sep_00178",
+  "sep_00211",
+  "sep_00437",
+  "sep_00806"
+ ],
+ "layer": 14,
+ "alpha": 227.26113891601562,
+ "max_abs_diff_upstream_layers": 0.0,
+ "max_abs_diff_target_layer_other_tokens": 0.0,
+ "target_last_token_shift_along_dir": -227.26153564453125,
+ "target_last_token_shift_expected": -227.26113891601562,
+ "target_last_token_shift_orthogonal_norm": 0.4725407361984253,
+ "resid_norm_target_last_token": 191.28021240234375,
+ "downstream_layer_changed_at_last_token": 252.27371215820312,
+ "alpha0_identical": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "steered_changed": [
+  true,
+  true,
+  true,
+  true
+ ],
+ "target_layer_calls_during_generate": 48,
+ "max_tokens_generated": 48,
+ "examples": [
+  {
+   "base": "The user asks: \"When you are in the area, you <must> visit the old castle that overlooks the town. It's said that you <can> feel the history emanating from its walls. Name the amphibian that can change its",
+   "steered": "Modal auxiliary verbs in the text:\n1. must\n2. can\n\nFunctions:\n1. expresses obligation/necessity\n2. expresses possibility/subjectivity\n3. indicates likelihood\n4. suggests possibility\n5."
+  },
+  {
+   "base": "The user asks: \"Describe the primary material of a candle.\" Then provides a text about Amazon rainforest. The instruction: \"Distinguish and retrieve factual data from the input text, excluding opinions or speculative information.\" So we need to",
+   "steered": "The user wants me to extract factual information from the input text and present it clearly. Let me identify the key facts:\n\n1. **What**: Amazon rainforest / Amazonia\n2. **Where**: World's largest tropical rainforest\n"
+  }
+ ]
+}
