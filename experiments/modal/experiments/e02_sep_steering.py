@@ -13,6 +13,8 @@ alpha, i.e. the same edit size.
 
 Stages (run from the repo root, .venv active). Only `split` is local; everything else runs on Modal:
   --stage extract   last-token resid_post for all 600 items x 4 conditions -> direction, stats, random control
+  --stage screen    cheap screen: baseline + layers x strengths on 40 VAL injection prompts at 160 tokens, label =
+                    witness or explicit commitment; then random controls at the best 3 settings
   --stage check     hook check on the real model (edit exact at the target layer only, nothing upstream changes)
                     + alpha=0 gives token-identical generations + the edit is applied on every decode step
   --stage val       baseline + layers x strengths on VAL (injection + user_instruction), auto-select configs
@@ -38,7 +40,7 @@ from pathlib import Path
 
 import modal
 
-from modal_common import (HF_CACHE_DIR, MELLUM, NOTICE, Runner, analyse, hf_cache, image, load_sep_split, outcome,
+from modal_common import (HF_CACHE_DIR, META, MELLUM, NOTICE, Runner, analyse, early_follow, hf_cache, image, load_sep_split, outcome,
                           repetition, wb_hit)
 
 EXP = "e02_sep_steering"
@@ -49,6 +51,9 @@ LAYERS = [7, 14, 21]            # early / middle / late of 28
 STRENGTHS = [-2.0, 1.0, 2.0, 4.0]   # c in alpha = c * |v_l|; negative = add the direction
 N_SELECT = 2                    # configs taken from val to test
 UI_DROP_MAX = 0.10              # selection: user_instruction follow rate may drop at most 10 points vs baseline
+SCREEN_N = 40                   # screen: val items (injection prompts only)
+SCREEN_TOKENS = 160             # screen: generation budget; label = early_follow (witness or explicit commitment)
+SCREEN_RANDOM_TOP = 3           # screen: random-direction controls at the best 3 direction settings
 DIR_NAME = "mellum_sep_injminusbenign_last_resid_post_v1"
 ACTS_PATH = "/artifacts/e02/last_token_resid_post_v1.npz"
 
@@ -195,10 +200,16 @@ def do_check(r: Runner, prompts: list[list[dict]], unit: list[float], layer: int
                        for a, b in zip(base[:2], on[:2])]
     return rep
 
-def do_run_arm(r: Runner, arm: dict, jobs: list[dict], batch_size: int = BATCH) -> dict:
+def do_run_arm(r: Runner, arm: dict, jobs: list[dict], batch_size: int = BATCH, max_new_tokens: int | None = None) -> dict:
     t = time.time()
     mk = None if arm["kind"] == "baseline" else steer_factory(r.lm.layout, arm["layer"], arm["unit"], arm["alpha"])
-    res = r.generate(jobs, batch_size=batch_size, make_iv=mk, label=arm["name"])
+    old = r.gc.max_new_tokens, r.max_new_tokens
+    if max_new_tokens:
+        r.gc.max_new_tokens = r.max_new_tokens = max_new_tokens
+    try:
+        res = r.generate(jobs, batch_size=batch_size, make_iv=mk, label=arm["name"])
+    finally:
+        r.gc.max_new_tokens, r.max_new_tokens = old
     return {"arm": {k: v for k, v in arm.items() if k != "unit"}, "results": res,
             "seconds": round(time.time() - t, 1), "info": r.info}
 
@@ -221,8 +232,8 @@ class Worker:
         return do_check(self.r, prompts, unit, layer, alpha)
 
     @modal.method()
-    def run_arm(self, arm: dict, jobs: list[dict]) -> dict:
-        return do_run_arm(self.r, arm, jobs)
+    def run_arm(self, arm: dict, jobs: list[dict], max_new_tokens: int | None = None) -> dict:
+        return do_run_arm(self.r, arm, jobs, max_new_tokens=max_new_tokens)
 
 
 # ---- local side ----------------------------------------------------------------------------------------------------
@@ -323,9 +334,9 @@ def load_arms(split_dir: Path) -> list[dict]:
     return outs
 
 
-def run_arms(arms: list[dict], jobs: list[dict]) -> list[dict]:
+def run_arms(arms: list[dict], jobs: list[dict], max_new_tokens: int | None = None) -> list[dict]:
     w = Worker()
-    return list(w.run_arm.starmap([(a, jobs) for a in arms]))
+    return list(w.run_arm.starmap([(a, jobs, max_new_tokens) for a in arms]))
 
 
 def stage_extract(sp: dict, items: dict) -> None:
@@ -374,6 +385,96 @@ def stage_check(sp: dict, items: dict) -> None:
     (OUT / "check").mkdir(parents=True, exist_ok=True)
     (OUT / "check" / "check.json").write_text(json.dumps({"items": ids, **rep}, indent=1) + "\n")
     print(json.dumps({k: v for k, v in rep.items() if k != "examples"}, indent=1))
+
+
+def screen_ids(sp: dict) -> list[str]:
+    import random
+    return sorted(random.Random(0).sample(sorted(sp["ids"]["val"]), SCREEN_N))
+
+
+def stage_screen(sp: dict, items: dict) -> None:
+    """Cheap screen: every layer x strength on SCREEN_N val injection prompts at SCREEN_TOKENS tokens, then random
+    controls at the best SCREEN_RANDOM_TOP direction settings (c>0)."""
+    v, rnd = load_direction()
+    ids = screen_ids(sp)
+    jobs = make_jobs(ids, ["injection"], items)
+    d = OUT / "screen"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "screen_ids.json").write_text(json.dumps({"from": "val", "rule": f"random.Random(0).sample(val, {SCREEN_N})",
+                                                    "ids": ids}, indent=1) + "\n")
+    arms = [arm_spec("baseline", None, None, v, rnd)] + [arm_spec("dir", l, c, v, rnd) for l in LAYERS for c in STRENGTHS]
+    print(f"screen phase 1: {len(arms)} arms x {len(jobs)} injection prompts, {SCREEN_TOKENS} tokens")
+    save_arms(d, run_arms(arms, jobs, SCREEN_TOKENS))
+    summ = screen_report(d, items, quiet=True)
+    best = [s["arm"] for s in sorted((s for s in summ if s["arm"].startswith("dir_") and "c-" not in s["arm"]),
+                                     key=lambda s: (s["follow"], s["witness"]))][:SCREEN_RANDOM_TOP]
+    ctrl = []
+    for name in best:
+        _, L, c = name.split("_")
+        ctrl.append(arm_spec("random", int(L[1:]), float(c[1:]), v, rnd))
+    print(f"screen phase 2: random controls for {best}")
+    save_arms(d, run_arms(ctrl, jobs, SCREEN_TOKENS))
+    screen_report(d, items)
+
+
+def screen_report(d: Path, items: dict, quiet: bool = False) -> list[dict]:
+    outs = load_arms(d)
+    by = {o["arm"]["name"]: {r["key"]: r for r in o["results"]} for o in outs}
+    keys = list(by["baseline"])
+    w_of = {k: items[k.split("|")[0]]["evaluation"]["witness"] for k in keys}
+    base = {k: early_follow(by["baseline"][k], w_of[k]) for k in keys}
+    rows, summ = [], []
+    order = ["baseline"] + sorted(a for a in by if a != "baseline")
+    for a in order:
+        ef = {k: early_follow(by[a][k], w_of[k]) for k in keys}
+        for k in keys:
+            r = by[a][k]
+            rows.append({"arm": a, "id": k.split("|")[0], "witness": w_of[k], **{f"{x}_{SCREEN_TOKENS}": y for x, y in ef[k].items()},
+                         "baseline_follow": base[k]["follow"], "finish": "eos" if r["finish_reason"] == "stop" else "cutoff",
+                         "n_tokens": r["n_response_tokens"], "starts_with_planning": bool(META.search(r["response_full"])),
+                         "repetition": repetition(r["response_full"]),
+                         "identical_to_baseline": r["response_full"] == by["baseline"][k]["response_full"]})
+        n = len(keys)
+        xs = rows[-n:]
+        summ.append({"arm": a, "n": n,
+                     "follow": round(sum(ef[k]["follow"] for k in keys) / n, 3),
+                     "witness": round(sum(ef[k]["witness"] for k in keys) / n, 3),
+                     "commit": round(sum(ef[k]["commit"] for k in keys) / n, 3),
+                     "stopped_following": sum(base[k]["follow"] and not ef[k]["follow"] for k in keys),
+                     "started_following": sum(ef[k]["follow"] and not base[k]["follow"] for k in keys),
+                     "starts_with_planning": round(sum(x["starts_with_planning"] for x in xs) / n, 3),
+                     "eos_rate": round(sum(x["finish"] == "eos" for x in xs) / n, 3),
+                     "high_repetition": round(sum(x["repetition"] > 0.3 for x in xs) / n, 3),
+                     "identical_to_baseline": round(sum(x["identical_to_baseline"] for x in xs) / n, 3)})
+    write_csv(d / "per_example.csv", rows)
+    write_csv(d / "summary.csv", summ)
+    # side by side for the items that changed under the best direction arms
+    dir_arms = sorted((s for s in summ if s["arm"].startswith("dir_")), key=lambda s: (s["follow"], s["witness"]))[:SCREEN_RANDOM_TOP]
+    lines = [f"E02 screen: {len(keys)} val injection prompts, {SCREEN_TOKENS} tokens. follow = witness or explicit "
+             "commitment (modal_common.early_follow). Items whose label changed vs baseline under the best direction arms; "
+             "random control shown when it exists.\n\n"]
+    for s in dir_arms:
+        a = s["arm"]
+        rn = a.replace("dir_", "rand_")
+        for k in keys:
+            fa = early_follow(by[a][k], w_of[k])["follow"]
+            if fa == base[k]["follow"]:
+                continue
+            it = items[k.split("|")[0]]
+            lines.append(f"{'=' * 100}\n{a} | {k.split('|')[0]} | {it['metadata']['subtask']} | probe: {it['metadata']['probe']} "
+                         f"| witness: {w_of[k]}\n{'=' * 100}\n")
+            for name in ["baseline", a] + ([rn] if rn in by else []):
+                lab = early_follow(by[name][k], w_of[k])
+                lines.append(f"\n--- {name} | follow={lab['follow']} (witness={lab['witness']}, commit={lab['commit']}) ---\n"
+                             f"{by[name][k]['response_full']}\n")
+            lines.append("\n")
+    (d / "compare.txt").write_text("".join(lines))
+    if not quiet:
+        print(f"\n{'arm':16s} {'follow':>6s} {'witn':>5s} {'commit':>6s} {'stop':>4s} {'start':>5s} {'plan':>5s} {'rep':>5s} {'same':>5s}")
+        for s in summ:
+            print(f"{s['arm']:16s} {s['follow']:6.2f} {s['witness']:5.2f} {s['commit']:6.2f} {s['stopped_following']:4d} "
+                  f"{s['started_following']:5d} {s['starts_with_planning']:5.2f} {s['high_repetition']:5.2f} {s['identical_to_baseline']:5.2f}")
+    return summ
 
 
 def select(summary: list[dict]) -> list[str]:
@@ -506,12 +607,16 @@ def main(stage: str, arms: str = ""):
     sp = load_sep_split()
     items = load_items()
     {"extract": lambda: stage_extract(sp, items), "check": lambda: stage_check(sp, items),
-     "val": lambda: stage_val(sp, items), "test": lambda: stage_test(sp, items, arms)}[stage]()
+     "screen": lambda: stage_screen(sp, items), "val": lambda: stage_val(sp, items),
+     "test": lambda: stage_test(sp, items, arms)}[stage]()
 
 
 if __name__ == "__main__":  # local, no Modal: rebuild summaries from saved generations
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--report", choices=["val", "test"], required=True)
+    ap.add_argument("--report", choices=["screen", "val", "test"], required=True)
     a = ap.parse_args()
-    report(OUT / a.report, load_items(), test=(a.report == "test"))
+    if a.report == "screen":
+        screen_report(OUT / "screen", load_items())
+    else:
+        report(OUT / a.report, load_items(), test=(a.report == "test"))
