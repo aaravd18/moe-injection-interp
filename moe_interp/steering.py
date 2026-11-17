@@ -230,11 +230,21 @@ def check_steer(lm: Any, item: dict, dirs: np.ndarray, layers: list[int], coef: 
     return rows
 
 
+def repetition(text: str, n: int = 3) -> float:
+    """Share of repeated word n-grams (0 = none repeated). A rough degeneration hint, not a judgement."""
+    w = text.split()
+    g = [tuple(w[i:i + n]) for i in range(len(w) - n + 1)]
+    return 0.0 if not g else 1 - len(set(g)) / len(g)
+
+
 def generate(lm: Any, gc: Any, rows: list[dict], make_iv: Callable | None = None, batch: int = 16,
-             skip_special: bool = True) -> tuple[list[str], list[bool]]:
+             skip_special: bool = True, return_meta: bool = False):
     """Batched generation in the given order (keep the order fixed across conditions: bf16 greedy decoding depends on
-    batch composition). Returns (texts, whole-word witness hits)."""
-    texts, hits = [], []
+    batch composition). Returns (texts, whole-word witness hits), plus per-row meta
+    ``{n_tokens, ended_eos, repetition}`` if ``return_meta``."""
+    eos = {int(x) for x in (gc.eos_token_id if isinstance(gc.eos_token_id, (list, tuple)) else [gc.eos_token_id])
+           if x is not None}
+    texts, hits, meta = [], [], []
     for i in range(0, len(rows), batch):
         chunk = rows[i:i + batch]
         ids = [r["input_ids"] for r in chunk]
@@ -248,7 +258,8 @@ def generate(lm: Any, gc: Any, rows: list[dict], make_iv: Callable | None = None
             t = lm.tokenizer.decode(x, skip_special_tokens=skip_special)
             texts.append(t)
             hits.append(wb_hit(t, r["witness"]) if r.get("witness") else False)
-    return texts, hits
+            meta.append({"n_tokens": len(x), "ended_eos": bool(x) and x[-1] in eos, "repetition": repetition(t)})
+    return (texts, hits, meta) if return_meta else (texts, hits)
 
 
 @torch.inference_mode()
