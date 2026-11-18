@@ -1,7 +1,14 @@
 # E03: OLMoE security expert, training data (SecPO)
 
-**Goal:** prepare and understand the training data for a security expert on OLMoE-1B-7B-0125-Instruct before
-choosing a training recipe. **Status:** data inspected only. No training, no inference.
+**Goal:** train a prompt-injection "security expert" on OLMoE-1B-7B-0125-Instruct with SecPO.
+
+> **Current state (2026-11-18): `secpo_v2` (Step 5) is the correct SecPO run. Use it, and `data/secpo_olmoe_v2/`.**
+> Steps 1, 3 and 4 (`data/secpo_olmoe_v1/`, `secpo_v1`, `secpo_v1_5ep`) built the *rejected* responses **wrongly**.
+> They used OLMoE's response to the full injected prompt, kept only when a judge said the attack worked. The paper uses
+> `y_l = f_undef(z′)`: the model's answer to the seed injected task **on its own**. Details are in Step 5. The v1 runs are
+> kept as a record and a negative comparison (v1: answers collapse; v2: ASR 0/208 begins-with, 6/208 Flash, with
+> base-like task performance), not as a SecPO baseline. The prompts, `chosen`, the split, the loss and the trainer
+> were correct in v1 and are reused unchanged.
 
 Data: [`data/secpo_qwen36_trainset/`](../../../data/secpo_qwen36_trainset/) (format, regeneration).
 Scripts: [`build_secpo_trainset.py`](../../../scripts/build_secpo_trainset.py),
@@ -162,6 +169,10 @@ USER    My dad was the first one in my family to have a college degrees
 ---
 
 ## Step 1: 2026-11-17, OLMoE self-generated preference set (`data/secpo_olmoe_v1/`): selection done, generation pending
+
+> **Superseded by Step 5: v1's `rejected` side is not SecPO's.** The plan below generates `rejected` from the
+> *injected prompt* and filters it with a judge. SecPO generates it from the seed task alone, with no filter. The
+> selection, the prompts and the clean (`chosen`) responses from this step are still used by v2.
 
 **Plan.** Keep SecPO's prompts, attacks and clean reconstructions. Have the frozen OLMoE-1B-7B-0125-Instruct
 answer both the clean and the injected prompt. Classify both answers with an LLM judge, then keep a preference pair
@@ -438,7 +449,11 @@ python experiments/modal/experiments/e03_secpo_train.py --out $OUT/secpo_v1 2>&1
 
 ---
 
-## Step 3: 2026-11-18, SecPO baseline `secpo_v1`: trained and evaluated on AlpacaFarm-208 (judge pending)
+## Step 3: 2026-11-18, `secpo_v1`: trained on the v1 pairs and evaluated on AlpacaFarm-208
+
+> **Not a valid SecPO baseline:** it was trained on v1 pairs whose `rejected` was built wrongly (see the top of the file
+> and Step 5). It is also bf16, which loses 74% of the expert-LoRA update. Keep it only as a comparison. The correct run
+> is `secpo_v2` (Step 5).
 
 Outputs: [`outputs/e03_olmoe_security_expert/`](../outputs/e03_olmoe_security_expert/): `secpo_v1/` (config, metrics,
 ref cache, run info; `adapter/` is gitignored, 487 MB, sha256 `d947d0f2…31acf77`), `secpo_v1_smoke*/`, `eval_v1/`.
@@ -537,6 +552,8 @@ python scripts/summarize_e03_eval.py --run base=$E/base_af208 --run secpo=$E/sec
 
 ## Step 4: 2026-11-18, `secpo_v1_5ep`: 5 epochs from scratch, adapter saved per epoch (val curve only)
 
+> **Same caveat as Step 3:** trained on the incorrect v1 pairs, in bf16. Superseded by `secpo_v2` (Step 5).
+
 The user asked for 4 more epochs to see where val loss plateaus. `secpo_v1`'s LR had already decayed to 0 and its
 AdamW state wasn't saved, so this is a **fresh 5-epoch run** (user's choice). It has the same settings as `secpo_v1`
 except `--epochs 5`: one warmup (6 steps), then linear decay over **175 steps**. It reuses `secpo_v1`'s reference
@@ -625,7 +642,7 @@ success / failure / unclear. Free tier = 15 RPM, 500/day, so the run needed retr
 
 ## Step 5: 2026-11-18, `secpo_v2`: SecPO data built as in the paper, then trained (fp32)
 
-### What was wrong with v1's `rejected`
+### Our mistake in v1: `rejected` was not built as in SecPO
 SecPO (arXiv:2610.41998, Algorithm 1 line 13) sets `y_l = f_undef(z′)`: the undefended model's answer to the seed injected
 task **on its own**. v1 instead used OLMoE's answer to the full injected prompt, and kept the record only when the judge
 said the attack worked. Three problems followed:
@@ -675,7 +692,7 @@ the paper.
 - `policy_prefers_chosen_adv` is already 0.84 at step 0, mostly because of the length gap. Check answer length in the
   evaluation.
 
-### Evaluation on AlpacaFarm-SecAlign 208 (`outputs/.../eval_v2/secpo_v2_af208_fp32/`; Gemini judge pending)
+### Evaluation on AlpacaFarm-SecAlign 208 (`outputs/.../eval_v2/secpo_v2_af208_fp32/`; judged with Flash Lite below)
 - **Settings:** same as eval_v1 (greedy, 512 new tokens, batch 32, adapter unmerged), except **float32**, H100. PEFT
   adds the expert delta to the fused weight in the model dtype, so bf16 inference would discard most of an fp32-trained
   expert update. New flag: `e03_generate.py --dtype`.

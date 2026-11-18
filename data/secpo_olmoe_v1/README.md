@@ -1,6 +1,11 @@
 # SecPO prompts with OLMoE self-generated, judge-checked responses (v1)
 
-Training data for the E03 OLMoE security expert. **Not trained on yet.** The prompts, attacks and clean prompts are
+> **Superseded by [`data/secpo_olmoe_v2/`](../secpo_olmoe_v2/README.md). Don't train on `pairs.jsonl` here.**
+> v1's `rejected` is OLMoE's response to the *injected prompt*, kept only when a judge said the attack worked. That is
+> not SecPO: the paper uses the model's answer to the seed injected task on its own. `secpo_v1` and `secpo_v1_5ep` were
+> trained on this file. `selected.jsonl` (the 1,500 prompts) and the clean responses are still the inputs to v2.
+
+Preference data for the E03 OLMoE security expert (v1, superseded). The prompts, attacks and clean prompts are
 SecPO's (`data/secpo_qwen36_trainset/`, unchanged). The responses are from the **frozen
 OLMoE-1B-7B-0125-Instruct**, and every response was classified by the Gemini Decisions API (`gemini-decision-1`).
 Full method, audit and limitations: [`experiments/modal/logbooks/e03_olmoe_security_expert.md`](../../experiments/modal/logbooks/e03_olmoe_security_expert.md).
