@@ -1,0 +1,225 @@
+{
+ "n_records": 1500,
+ "n_pairs": 654,
+ "chosen_valid": 991,
+ "attack_followed": 990,
+ "clean_judge_verdict": {
+  "incorrect": 349,
+  "correct": 994,
+  "partially_correct": 120,
+  "off_task": 37
+ },
+ "injection_outcome": {
+  "attack_and_task": 435,
+  "neither": 174,
+  "resisted": 336,
+  "attack_only": 555
+ },
+ "not_pair_reasons": {
+  "clean_incorrect": 349,
+  "injection_neither": 174,
+  "injection_resisted": 336,
+  "clean_truncated": 34,
+  "clean_partially_correct": 120,
+  "clean_off_task": 37,
+  "clean_degenerate": 4
+ },
+ "pairs_with_truncated_rejected": 53,
+ "borderline_records": 448,
+ "borderline_pairs": 187,
+ "by_position": {
+  "end": {
+   "n": 750,
+   "pairs": 348,
+   "attack_followed": 518,
+   "chosen_valid": 501
+  },
+  "start": {
+   "n": 750,
+   "pairs": 306,
+   "attack_followed": 472,
+   "chosen_valid": 490
+  }
+ },
+ "by_task_type": {
+  "classify": {
+   "n": 186,
+   "pairs": 67,
+   "attack_followed": 103,
+   "chosen_valid": 118
+  },
+  "code": {
+   "n": 165,
+   "pairs": 60,
+   "attack_followed": 107,
+   "chosen_valid": 98
+  },
+  "explain": {
+   "n": 186,
+   "pairs": 102,
+   "attack_followed": 132,
+   "chosen_valid": 145
+  },
+  "extract": {
+   "n": 186,
+   "pairs": 96,
+   "attack_followed": 134,
+   "chosen_valid": 123
+  },
+  "generate": {
+   "n": 184,
+   "pairs": 82,
+   "attack_followed": 117,
+   "chosen_valid": 124
+  },
+  "math": {
+   "n": 113,
+   "pairs": 55,
+   "attack_followed": 88,
+   "chosen_valid": 71
+  },
+  "other": {
+   "n": 184,
+   "pairs": 76,
+   "attack_followed": 124,
+   "chosen_valid": 113
+  },
+  "rewrite": {
+   "n": 183,
+   "pairs": 73,
+   "attack_followed": 120,
+   "chosen_valid": 123
+  },
+  "summarize": {
+   "n": 76,
+   "pairs": 33,
+   "attack_followed": 49,
+   "chosen_valid": 50
+  },
+  "translate": {
+   "n": 37,
+   "pairs": 10,
+   "attack_followed": 16,
+   "chosen_valid": 26
+  }
+ },
+ "by_seed_verbatim": {
+  "False": {
+   "n": 965,
+   "pairs": 435,
+   "attack_followed": 657,
+   "chosen_valid": 643
+  },
+  "True": {
+   "n": 535,
+   "pairs": 219,
+   "attack_followed": 333,
+   "chosen_valid": 348
+  }
+ },
+ "tokens_all_records": {
+  "prompt_clean": {
+   "n": 1500,
+   "mean": 41.0,
+   "p50": 39,
+   "p90": 52,
+   "max": 102
+  },
+  "prompt_injection": {
+   "n": 1500,
+   "mean": 104.2,
+   "p50": 108,
+   "p90": 125,
+   "max": 128
+  },
+  "response_clean": {
+   "n": 1500,
+   "mean": 83.9,
+   "p50": 33,
+   "p90": 235,
+   "max": 512
+  },
+  "response_injection": {
+   "n": 1500,
+   "mean": 162.2,
+   "p50": 105,
+   "p90": 447,
+   "max": 512
+  },
+  "truncated_clean": 34,
+  "truncated_injection": 100
+ },
+ "tokens_pairs": {
+  "chosen": {
+   "n": 654,
+   "mean": 79.3,
+   "p50": 37,
+   "p90": 219,
+   "max": 512
+  },
+  "rejected": {
+   "n": 654,
+   "mean": 189.8,
+   "p50": 142,
+   "p90": 478,
+   "max": 512
+  },
+  "pair_length": {
+   "n": 654,
+   "mean": 306.8,
+   "p50": 261,
+   "p90": 594,
+   "max": 640
+  },
+  "pair_fits": {
+   "256": 321,
+   "512": 552,
+   "1024": 654
+  },
+  "rejected_longer_than_chosen": 545
+ },
+ "run_info": {
+  "step": "e03_generate",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "device": "cuda",
+  "tiny_random": false,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "data": "/workspace/security-project/repos/moe-injection-interp-e03/data/secpo_olmoe_v1/selected.jsonl",
+  "data_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+  "subset": "all",
+  "n_records": 1500,
+  "n_generations": 3000,
+  "conditions": [
+   "clean",
+   "injection"
+  ],
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "batch_size": 32,
+  "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+  "load_seconds": 44.4,
+  "generate_seconds": 2086.3,
+  "finished_with_eos": 2866
+ },
+ "judge_info": {
+  "step": "e03_judge",
+  "api": "https://generativelanguage.googleapis.com/v1beta/decisions",
+  "model": "gemini-decision-1",
+  "decision_rule": "yes/no: P(yes) >= 0.5; choice: argmax",
+  "n_judgments": 3000,
+  "errors": 0,
+  "input_tokens_this_run": 1716981,
+  "seconds_this_run": 2959.6,
+  "questions_sha256": "b0b4ee2656d65b578889a24d88e06ebe120a671166da138d8199ed4888eb88e9",
+  "repeat_check": {
+   "n_requests": 20,
+   "decision_flips": 0,
+   "max_prob_diff": 0.0
+  }
+ }
+}

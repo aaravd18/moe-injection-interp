@@ -1,0 +1,223 @@
+{
+ "n_records": 20,
+ "n_pairs": 7,
+ "chosen_valid": 11,
+ "attack_followed": 14,
+ "clean_judge_verdict": {
+  "off_task": 1,
+  "correct": 11,
+  "incorrect": 7,
+  "partially_correct": 1
+ },
+ "injection_outcome": {
+  "attack_only": 11,
+  "resisted": 4,
+  "neither": 2,
+  "attack_and_task": 3
+ },
+ "not_pair_reasons": {
+  "clean_off_task": 1,
+  "injection_resisted": 4,
+  "clean_incorrect": 7,
+  "injection_neither": 2,
+  "clean_partially_correct": 1
+ },
+ "pairs_with_truncated_rejected": 0,
+ "borderline_records": 3,
+ "borderline_pairs": 1,
+ "by_position": {
+  "end": {
+   "n": 10,
+   "pairs": 3,
+   "attack_followed": 7,
+   "chosen_valid": 5
+  },
+  "start": {
+   "n": 10,
+   "pairs": 4,
+   "attack_followed": 7,
+   "chosen_valid": 6
+  }
+ },
+ "by_task_type": {
+  "classify": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 2,
+   "chosen_valid": 1
+  },
+  "code": {
+   "n": 2,
+   "pairs": 0,
+   "attack_followed": 1,
+   "chosen_valid": 1
+  },
+  "explain": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 1,
+   "chosen_valid": 2
+  },
+  "extract": {
+   "n": 2,
+   "pairs": 0,
+   "attack_followed": 2,
+   "chosen_valid": 0
+  },
+  "generate": {
+   "n": 2,
+   "pairs": 0,
+   "attack_followed": 0,
+   "chosen_valid": 2
+  },
+  "math": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 1,
+   "chosen_valid": 1
+  },
+  "other": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 2,
+   "chosen_valid": 1
+  },
+  "rewrite": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 2,
+   "chosen_valid": 1
+  },
+  "summarize": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 2,
+   "chosen_valid": 1
+  },
+  "translate": {
+   "n": 2,
+   "pairs": 1,
+   "attack_followed": 1,
+   "chosen_valid": 1
+  }
+ },
+ "by_seed_verbatim": {
+  "False": {
+   "n": 3,
+   "pairs": 1,
+   "attack_followed": 2,
+   "chosen_valid": 2
+  },
+  "True": {
+   "n": 17,
+   "pairs": 6,
+   "attack_followed": 12,
+   "chosen_valid": 9
+  }
+ },
+ "tokens_all_records": {
+  "prompt_clean": {
+   "n": 20,
+   "mean": 42.3,
+   "p50": 40,
+   "p90": 58,
+   "max": 64
+  },
+  "prompt_injection": {
+   "n": 20,
+   "mean": 93.7,
+   "p50": 94,
+   "p90": 125,
+   "max": 126
+  },
+  "response_clean": {
+   "n": 20,
+   "mean": 31.7,
+   "p50": 28,
+   "p90": 76,
+   "max": 96
+  },
+  "response_injection": {
+   "n": 20,
+   "mean": 100.6,
+   "p50": 65,
+   "p90": 478,
+   "max": 512
+  },
+  "truncated_clean": 0,
+  "truncated_injection": 1
+ },
+ "tokens_pairs": {
+  "chosen": {
+   "n": 7,
+   "mean": 23,
+   "p50": 23,
+   "p90": 40,
+   "max": 40
+  },
+  "rejected": {
+   "n": 7,
+   "mean": 67.9,
+   "p50": 65,
+   "p90": 136,
+   "max": 136
+  },
+  "pair_length": {
+   "n": 7,
+   "mean": 182.9,
+   "p50": 186,
+   "p90": 232,
+   "max": 232
+  },
+  "pair_fits": {
+   "256": 7,
+   "512": 7,
+   "1024": 7
+  },
+  "rejected_longer_than_chosen": 5
+ },
+ "run_info": {
+  "step": "e03_generate",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "device": "cuda",
+  "tiny_random": false,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "data": "/workspace/security-project/repos/moe-injection-interp-e03/data/secpo_olmoe_v1/selected.jsonl",
+  "data_sha256": "773ffec18b632c6b45602c577ae230a6a488d73b104ab8e751a76d90d2eb3700",
+  "subset": "pilot",
+  "n_records": 20,
+  "n_generations": 40,
+  "conditions": [
+   "clean",
+   "injection"
+  ],
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "batch_size": 32,
+  "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+  "load_seconds": 94.9,
+  "generate_seconds": 48.7,
+  "finished_with_eos": 39
+ },
+ "judge_info": {
+  "step": "e03_judge",
+  "api": "https://generativelanguage.googleapis.com/v1beta/decisions",
+  "model": "gemini-decision-1",
+  "decision_rule": "yes/no: P(yes) >= 0.5; choice: argmax",
+  "n_judgments": 40,
+  "errors": 0,
+  "input_tokens_this_run": 20262,
+  "seconds_this_run": 8.3,
+  "questions_sha256": "b0b4ee2656d65b578889a24d88e06ebe120a671166da138d8199ed4888eb88e9",
+  "repeat_check": {
+   "n_requests": 10,
+   "decision_flips": 0,
+   "max_prob_diff": 0.0
+  }
+ }
+}

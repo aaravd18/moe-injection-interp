@@ -1,0 +1,123 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:11, 14.75it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:05, 32.28it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:03, 38.51it/s]Loading weights:  21%|██        | 37/179 [00:01<00:03, 38.11it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:03, 37.95it/s]Loading weights:  33%|███▎      | 59/179 [00:01<00:03, 38.43it/s]Loading weights:  39%|███▉      | 70/179 [00:01<00:02, 38.30it/s]Loading weights:  45%|████▌     | 81/179 [00:02<00:02, 38.29it/s]Loading weights:  51%|█████▏    | 92/179 [00:02<00:02, 38.32it/s]Loading weights:  58%|█████▊    | 103/179 [00:02<00:02, 37.98it/s]Loading weights:  64%|██████▎   | 114/179 [00:03<00:01, 37.95it/s]Loading weights:  70%|██████▉   | 125/179 [00:03<00:01, 37.60it/s]Loading weights:  76%|███████▌  | 136/179 [00:03<00:01, 40.82it/s]Loading weights:  82%|████████▏ | 147/179 [00:03<00:00, 40.04it/s]Loading weights:  88%|████████▊ | 158/179 [00:04<00:00, 39.50it/s]Loading weights:  94%|█████████▍| 169/179 [00:04<00:00, 38.87it/s]Loading weights: 100%|██████████| 179/179 [00:04<00:00, 40.19it/s]
+clean: 32/1500  (42s)
+clean: 64/1500  (66s)
+clean: 96/1500  (88s)
+clean: 128/1500  (112s)
+clean: 160/1500  (135s)
+clean: 192/1500  (155s)
+clean: 224/1500  (179s)
+clean: 256/1500  (198s)
+clean: 288/1500  (211s)
+clean: 320/1500  (235s)
+clean: 352/1500  (258s)
+clean: 384/1500  (281s)
+clean: 416/1500  (305s)
+clean: 448/1500  (328s)
+clean: 480/1500  (345s)
+clean: 512/1500  (365s)
+clean: 544/1500  (388s)
+clean: 576/1500  (411s)
+clean: 608/1500  (435s)
+clean: 640/1500  (458s)
+clean: 672/1500  (470s)
+clean: 704/1500  (494s)
+clean: 736/1500  (517s)
+clean: 768/1500  (540s)
+clean: 800/1500  (564s)
+clean: 832/1500  (586s)
+clean: 864/1500  (593s)
+clean: 896/1500  (605s)
+clean: 928/1500  (628s)
+clean: 960/1500  (643s)
+clean: 992/1500  (653s)
+clean: 1024/1500  (676s)
+clean: 1056/1500  (696s)
+clean: 1088/1500  (719s)
+clean: 1120/1500  (742s)
+clean: 1152/1500  (766s)
+clean: 1184/1500  (785s)
+clean: 1216/1500  (806s)
+clean: 1248/1500  (829s)
+clean: 1280/1500  (850s)
+clean: 1312/1500  (873s)
+clean: 1344/1500  (886s)
+clean: 1376/1500  (910s)
+clean: 1408/1500  (932s)
+clean: 1440/1500  (944s)
+clean: 1472/1500  (967s)
+clean: 1500/1500  (998s)
+injection: 32/1500  (1024s)
+injection: 64/1500  (1047s)
+injection: 96/1500  (1071s)
+injection: 128/1500  (1095s)
+injection: 160/1500  (1117s)
+injection: 192/1500  (1140s)
+injection: 224/1500  (1164s)
+injection: 256/1500  (1187s)
+injection: 288/1500  (1200s)
+injection: 320/1500  (1224s)
+injection: 352/1500  (1247s)
+injection: 384/1500  (1271s)
+injection: 416/1500  (1295s)
+injection: 448/1500  (1318s)
+injection: 480/1500  (1342s)
+injection: 512/1500  (1365s)
+injection: 544/1500  (1389s)
+injection: 576/1500  (1412s)
+injection: 608/1500  (1436s)
+injection: 640/1500  (1459s)
+injection: 672/1500  (1477s)
+injection: 704/1500  (1500s)
+injection: 736/1500  (1523s)
+injection: 768/1500  (1547s)
+injection: 800/1500  (1571s)
+injection: 832/1500  (1594s)
+injection: 864/1500  (1618s)
+injection: 896/1500  (1641s)
+injection: 928/1500  (1665s)
+injection: 960/1500  (1685s)
+injection: 992/1500  (1708s)
+injection: 1024/1500  (1732s)
+injection: 1056/1500  (1755s)
+injection: 1088/1500  (1779s)
+injection: 1120/1500  (1802s)
+injection: 1152/1500  (1826s)
+injection: 1184/1500  (1849s)
+injection: 1216/1500  (1873s)
+injection: 1248/1500  (1897s)
+injection: 1280/1500  (1920s)
+injection: 1312/1500  (1944s)
+injection: 1344/1500  (1967s)
+injection: 1376/1500  (1991s)
+injection: 1408/1500  (2015s)
+injection: 1440/1500  (2038s)
+injection: 1472/1500  (2062s)
+injection: 1500/1500  (2086s)
+{
+ "step": "e03_generate",
+ "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+ "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+ "resolved_commit_hash": null,
+ "dtype": "bfloat16",
+ "device": "cuda",
+ "tiny_random": false,
+ "gpu": "NVIDIA H100 80GB HBM3",
+ "torch": "2.14.1+cu130",
+ "transformers": "5.22.1",
+ "data": "/workspace/security-project/repos/moe-injection-interp-e03/data/secpo_olmoe_v1/selected.jsonl",
+ "data_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+ "subset": "all",
+ "n_records": 1500,
+ "n_generations": 3000,
+ "conditions": [
+  "clean",
+  "injection"
+ ],
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "batch_size": 32,
+ "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+ "load_seconds": 44.4,
+ "generate_seconds": 2086.3,
+ "finished_with_eos": 2866
+}

@@ -1,0 +1,16 @@
+{
+  "step": "e03_judge",
+  "api": "https://generativelanguage.googleapis.com/v1beta/decisions",
+  "model": "gemini-decision-1",
+  "decision_rule": "yes/no: P(yes) >= 0.5; choice: argmax",
+  "n_judgments": 3000,
+  "errors": 0,
+  "input_tokens_this_run": 1716981,
+  "seconds_this_run": 2959.6,
+  "questions_sha256": "b0b4ee2656d65b578889a24d88e06ebe120a671166da138d8199ed4888eb88e9",
+  "repeat_check": {
+    "n_requests": 20,
+    "decision_flips": 0,
+    "max_prob_diff": 0.0
+  }
+}
