@@ -1,0 +1,39 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:07, 23.28it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:04, 36.33it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:03, 39.85it/s]Loading weights:  21%|██        | 37/179 [00:00<00:03, 42.47it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:03, 40.25it/s]Loading weights:  33%|███▎      | 59/179 [00:01<00:03, 38.79it/s]Loading weights:  39%|███▉      | 70/179 [00:01<00:02, 37.95it/s]Loading weights:  45%|████▌     | 81/179 [00:02<00:02, 37.59it/s]Loading weights:  51%|█████▏    | 92/179 [00:02<00:02, 38.45it/s]Loading weights:  58%|█████▊    | 103/179 [00:02<00:02, 37.85it/s]Loading weights:  64%|██████▎   | 114/179 [00:02<00:01, 37.59it/s]Loading weights:  70%|██████▉   | 125/179 [00:03<00:01, 37.07it/s]Loading weights:  76%|███████▌  | 136/179 [00:03<00:01, 36.19it/s]Loading weights:  82%|████████▏ | 147/179 [00:03<00:00, 36.04it/s]Loading weights:  88%|████████▊ | 158/179 [00:04<00:00, 36.08it/s]Loading weights:  94%|█████████▍| 169/179 [00:04<00:00, 34.68it/s]Loading weights: 100%|██████████| 179/179 [00:04<00:00, 38.97it/s]
+seed_task: 64/375  (130s)
+seed_task: 128/375  (230s)
+seed_task: 192/375  (331s)
+seed_task: 256/375  (421s)
+seed_task: 320/375  (493s)
+seed_task: 375/375  (564s)
+{
+ "step": "e03_generate",
+ "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+ "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+ "resolved_commit_hash": null,
+ "dtype": "bfloat16",
+ "device": "cuda",
+ "tiny_random": false,
+ "adapter": null,
+ "adapter_sha256": null,
+ "split": null,
+ "split_file": null,
+ "gpu": "NVIDIA H100 80GB HBM3",
+ "torch": "2.14.1+cu130",
+ "transformers": "5.22.1",
+ "data": "/workspace/moe-injection-interp/data/secpo_olmoe_v1/selected.jsonl",
+ "data_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+ "subset": "all",
+ "shard": "2/4",
+ "n_records": 375,
+ "n_generations": 375,
+ "conditions": [
+  "seed_task"
+ ],
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "batch_size": 64,
+ "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: user = metadata.seed_task.strip(), no system; add_generation_prompt",
+ "load_seconds": 8.6,
+ "generate_seconds": 564.5,
+ "finished_with_eos": 291
+}

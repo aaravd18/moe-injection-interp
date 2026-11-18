@@ -1,0 +1,32 @@
+{
+  "n_pairs": 1500,
+  "construction": "chosen = OLMoE(clean prompt); rejected = OLMoE(seed_task alone, user turn); no filtering",
+  "chosen_tokens": {
+    "mean": 83.9,
+    "p50": 33,
+    "p90": 235,
+    "max": 512
+  },
+  "rejected_tokens": {
+    "mean": 260.3,
+    "p50": 237,
+    "p90": 512,
+    "max": 512
+  },
+  "chosen_truncated_512": 34,
+  "rejected_truncated_512": 376,
+  "rejected_longer_than_chosen": 1153,
+  "chosen_repetition_ge_0.5": 4,
+  "rejected_repetition_ge_0.5": 1,
+  "by_position": {
+    "start": 750,
+    "end": 750
+  },
+  "inputs": {
+    "selected": "data/secpo_olmoe_v1/selected.jsonl",
+    "selected_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+    "clean_generations_sha256": "d1d7d14225fe5e0c4187d774fdfb19f055ef0e123f6beedb0bca5ae6e6387bba",
+    "seed_generations_sha256": "65c3f002681cc488976988bd367415af403e39d7f5db2258bb43ce218b884d84"
+  },
+  "pairs_sha256": "d6d3b74f26bcde30e33540dd772de17451326dd3e40c04a21cee6729fa5faffd"
+}

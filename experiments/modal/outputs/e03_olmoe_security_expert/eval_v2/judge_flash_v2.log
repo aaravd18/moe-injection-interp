@@ -1,0 +1,56 @@
+judged 25/412  (74s)
+judged 50/412  (190s)
+judged 75/412  (305s)
+judged 100/412  (424s)
+judged 125/412  (501s)
+judged 150/412  (618s)
+judged 175/412  (735s)
+judged 200/412  (851s)
+judged 225/412  (963s)
+judged 250/412  (1049s)
+judged 275/412  (1167s)
+judged 300/412  (1281s)
+judged 325/412  (1747s)
+judged 350/412  (1821s)
+judged 375/412  (1935s)
+judged 400/412  (2053s)
+judged 412/412  (2112s)
+{
+ "step": "e03_judge_flash",
+ "api": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+ "model": "gemini-3.5-flash-lite",
+ "generation_config": {
+  "temperature": 0,
+  "responseMimeType": "application/json",
+  "thinkingConfig": {
+   "thinkingLevel": "minimal"
+  },
+  "maxOutputTokens": 1024
+ },
+ "prompt_sha256": "b115d0ebace279da4a023d3e08c770616b161c4d7a078e9f08e0368b1b15e400",
+ "n_judgments": 416,
+ "n_expected": 416,
+ "label_counts": {
+  "clean.task": {
+   "success": 145,
+   "failure": 63
+  },
+  "injection.task": {
+   "success": 173,
+   "failure": 35
+  },
+  "injection.attack": {
+   "success": 6,
+   "failure": 202
+  }
+ },
+ "errors": 0,
+ "error_messages": [],
+ "tokens_this_run": {
+  "prompt": 233391,
+  "output": 24940,
+  "thoughts": 0
+ },
+ "requests_this_run": 412,
+ "seconds_this_run": 2111.8
+}

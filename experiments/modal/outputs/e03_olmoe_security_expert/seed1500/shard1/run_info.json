@@ -1,0 +1,32 @@
+{
+  "step": "e03_generate",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "device": "cuda",
+  "tiny_random": false,
+  "adapter": null,
+  "adapter_sha256": null,
+  "split": null,
+  "split_file": null,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "data": "/workspace/moe-injection-interp/data/secpo_olmoe_v1/selected.jsonl",
+  "data_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+  "subset": "all",
+  "shard": "1/4",
+  "n_records": 375,
+  "n_generations": 375,
+  "conditions": [
+    "seed_task"
+  ],
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "batch_size": 64,
+  "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: user = metadata.seed_task.strip(), no system; add_generation_prompt",
+  "load_seconds": 11.2,
+  "generate_seconds": 827.8,
+  "finished_with_eos": 266
+}

@@ -1,0 +1,16 @@
+impl sdpa grouped_mm bfloat16
+eval bs16 vs cache       max 0.000  mean 0.000
+eval bs16 repeat         max 0.000  mean 0.000
+eval bs8 repeat          max 0.000  mean 0.000
+eval bs8 vs bs16         max 1.841  mean 0.550
+eval bs1 vs bs8          max 1.382  mean 0.350
+eval bs1 vs bs16         max 1.020  mean 0.415
+train bs8 vs eval bs8    max 0.000  mean 0.000
+train+ckpt bs8 vs eval8  max 0.000  mean 0.000
+per-example |bs1-bs8| (chosen, rejected): [[0.42, 0.37], [0.07, 0.76], [0.0, 0.62], [0.24, 0.38], [0.24, 0.22], [0.02, 1.38], [0.2, 0.43], [0.23, 0.03]]
+response lengths (chosen, rejected): [(15, 6), (13, 180), (10, 229), (296, 512), (45, 171), (7, 60), (20, 44), (13, 46)]
+worst example secpo_00221 rejected: 60 scored tokens; summed diff 1.382; per-token max 0.543, >0.1: 14, >0.01: 39
+routing: (token, layer) slots whose top-8 set differs, batch 8 vs alone: 111/1488
+peft disabled train bs8 vs train+ckpt bs8 max 0.000  mean 0.000
+peft disabled train bs8 vs cache         max 1.841  mean 0.550
+mem peak GB 21.2

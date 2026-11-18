@@ -35,12 +35,14 @@ modal run experiments/modal/experiments/e01_sep_baseline_outputs.py --help     #
 |----|------|---------|
 | e01 | Baseline Mellum outputs on 20 SEP items, clean vs benign vs injection, read by hand | [logbooks/e01_sep_baseline_outputs.md](logbooks/e01_sep_baseline_outputs.md) |
 | e02 | Activation steering against injection: injection−benign direction at the last prompt token, val sweep, test vs random control | [logbooks/e02_sep_steering.md](logbooks/e02_sep_steering.md) |
-| e03 | OLMoE security expert. Step 0: SecPO training-set conversion and inspection (no training yet) | [logbooks/e03_olmoe_security_expert.md](logbooks/e03_olmoe_security_expert.md) |
+| e03 | OLMoE security expert. Steps 0–1: SecPO data, OLMoE self-generated pairs. Step 2: SecPO LoRA pipeline. Step 3: `secpo_v1` (L40S): ASR 6.7% → 0% but answers collapse. Step 5: `secpo_v2` on paper-style pairs (`y_l` = OLMoE on the seed task alone, 1,500 unfiltered pairs, fp32): ASR 0/208 with base-like answer length (judge pending) | [logbooks/e03_olmoe_security_expert.md](logbooks/e03_olmoe_security_expert.md) |
 
 ## Reusable artifacts (`artifacts/`)
 - `splits/sep600_witness_grouped_v1.json`: train/val/test item ids for `data/sep_600.jsonl`, grouped by probe
   question (no leakage). Load with `modal_common.load_sep_split()`. Use it for every SEP experiment so held-out
   results are comparable.
+- `splits/secpo_olmoe_v1_grouped_v1.json`: train/val ids for `data/secpo_olmoe_v1` (all 1,500 records + the 654
+  v1 pairs; v2 trains on `ids`, 1,275 / 225), grouped by shared instruction / data / injection wrapper incl. near-duplicate wrappers. Used by e03 training.
 - `directions/mellum_sep_injminusbenign_last_resid_post_v1.npz` (+ `.json`): per-layer injection−benign direction
   (unnormalised) and a random control direction, fitted on the train split.
 - Modal volume `moe-interp-artifacts`: full last-token activations for all 600 × 4 prompts × 28 layers (e02).

@@ -1,0 +1,64 @@
+{
+ "step": "e03_secpo_train",
+ "optimizer_steps": 35,
+ "load_seconds": 6.1,
+ "ref_cache_seconds": 51.1,
+ "ref_cache_reused": false,
+ "train_seconds": 125.3,
+ "total_seconds": 201.1,
+ "mem_alloc_gb": 14.3,
+ "mem_peak_gb": 23.91,
+ "mem_reserved_gb": 32.6,
+ "expert_delta_realization": {
+  "tensors": 32,
+  "rel_error": 0.7429,
+  "cosine": 0.6934,
+  "intended_norm": 1.176522
+ },
+ "val_step0": {
+  "all": {
+   "n": 98,
+   "loss": 15.386431246387716,
+   "secpo_margin": -153.8610725013577,
+   "secpo_acc": 0.0,
+   "policy_logratio_adv": 16.805980769955383,
+   "policy_prefers_chosen_adv": 0.5612244897959183,
+   "chosen_reward": -3.1263489887422447,
+   "rejected_reward": 12.259758523532323
+  },
+  "strict": {
+   "n": 65,
+   "loss": 15.66454782485962,
+   "secpo_margin": -156.6414424602802,
+   "secpo_acc": 0.0,
+   "policy_logratio_adv": 24.979603415269118,
+   "policy_prefers_chosen_adv": 0.6153846153846154,
+   "chosen_reward": -2.8741468383715705,
+   "rejected_reward": 12.78999764735882
+  }
+ },
+ "val_final": {
+  "all": {
+   "n": 98,
+   "loss": 3.7491447826375346,
+   "secpo_margin": 15.404028094544703,
+   "secpo_acc": 0.4489795918367347,
+   "policy_logratio_adv": 186.07108089875203,
+   "policy_prefers_chosen_adv": 0.8877551020408163,
+   "chosen_reward": -6.518561567578997,
+   "rejected_reward": -8.058964398974666
+  },
+  "strict": {
+   "n": 65,
+   "loss": 2.9953845123152734,
+   "secpo_margin": 23.25502172616812,
+   "secpo_acc": 0.49230769230769234,
+   "policy_logratio_adv": 204.87606714688815,
+   "policy_prefers_chosen_adv": 0.9230769230769231,
+   "chosen_reward": -6.479514138515179,
+   "rejected_reward": -8.805016358425984
+  }
+ },
+ "adapter_dir": "experiments/modal/outputs/e03_olmoe_security_expert/secpo_v1/adapter",
+ "config": "config.json"
+}

@@ -1,0 +1,43 @@
+{
+  "step": "e03_generate",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "device": "cuda",
+  "tiny_random": false,
+  "adapter": null,
+  "adapter_sha256": null,
+  "split": null,
+  "split_file": null,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "data": "/workspace/moe-injection-interp/data/secpo_olmoe_v1/selected.jsonl",
+  "data_sha256": "22a62c96797c3476d252ddacc57eba09c72b4b2ca677339bb81bf13517702bb6",
+  "subset": "all",
+  "conditions": [
+    "seed_task"
+  ],
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "batch_size": 64,
+  "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: user = metadata.seed_task.strip(), no system; add_generation_prompt",
+  "merged_from_shards": [
+    "0/4",
+    "1/4",
+    "2/4",
+    "3/4"
+  ],
+  "n_records": 1500,
+  "n_generations": 1500,
+  "finished_with_eos": 1124,
+  "generate_seconds_per_shard": [
+    835.0,
+    827.8,
+    564.5,
+    585.9
+  ],
+  "note": "4 contiguous shards in file order; shards 2 and 3 OOMed once when 4 (then 3) processes shared the H100 and were rerun from scratch; logs in logs/",
+  "generations_sha256": "65c3f002681cc488976988bd367415af403e39d7f5db2258bb43ce218b884d84"
+}

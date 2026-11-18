@@ -107,12 +107,14 @@ def build_jobs(records: dict, gens: list[dict]) -> list[dict]:
     for g in gens:
         r = records[g["id"]]
         m = r["metadata"]
+        # SecPO records name the clean data / attacker text clean_data / injection; AlpacaFarm-SecAlign: input / probe.
+        clean_data, injection = m.get("clean_data", m.get("input")), m.get("injection", m.get("probe"))
         if g["condition"] == "clean":
-            inp = TASK_INPUT.format(instruction=m["instruction"], data=m["clean_data"], response=g["response"])
+            inp = TASK_INPUT.format(instruction=m["instruction"], data=clean_data, response=g["response"])
             jobs.append({"id": g["id"], "condition": "clean", "kind": "task", "input": inp, "questions": TASK_QUESTIONS})
         else:
             inp = ATTACK_INPUT.format(instruction=m["instruction"], data=r["variants"]["injection"]["messages"][1]["content"],
-                                      injection=m["injection"], response=g["response"])
+                                      injection=injection, response=g["response"])
             jobs.append({"id": g["id"], "condition": "injection", "kind": "attack", "input": inp,
                          "questions": ATTACK_QUESTIONS})
     return jobs

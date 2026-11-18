@@ -1,0 +1,80 @@
+{
+ "args": {
+  "data": "/workspace/moe-injection-interp/data/secpo_olmoe_v1/pairs.jsonl",
+  "split": "/workspace/moe-injection-interp/experiments/modal/artifacts/splits/secpo_olmoe_v1_grouped_v1.json",
+  "out": "experiments/modal/outputs/e03_olmoe_security_expert/secpo_v1_5ep",
+  "smoke": false,
+  "tiny": false,
+  "dtype": null,
+  "limit": null,
+  "strict_only": false,
+  "beta": 0.1,
+  "lr": 0.00016,
+  "epochs": 5.0,
+  "micro_batch": 8,
+  "grad_accum": 2,
+  "max_len": 1024,
+  "lora_r": 16,
+  "lora_alpha": 4.0,
+  "warmup_ratio": 0.03,
+  "max_grad_norm": 1.0,
+  "eval_every": 10,
+  "save_every_epoch": true,
+  "eval_batch": 16,
+  "no_grad_ckpt": false,
+  "seed": 42,
+  "ref_cache": null
+ },
+ "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+ "revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+ "dtype": "bfloat16",
+ "device": "cuda",
+ "experts": "fused 3D experts (target_parameters)",
+ "lora": {
+  "r": 16,
+  "target_modules": [
+   "k_proj",
+   "o_proj",
+   "q_proj",
+   "v_proj"
+  ],
+  "lora_alpha": 4.0,
+  "lora_dropout": 0.0,
+  "bias": "none",
+  "target_parameters": [
+   "mlp.experts.down_proj",
+   "mlp.experts.gate_up_proj"
+  ]
+ },
+ "params": {
+  "trainable": 121634816,
+  "frozen": 6919161856,
+  "trainable_pct": 1.728,
+  "trainable_by_group": {
+   "attention": 4194304,
+   "experts": 117440512,
+   "other": 0
+  },
+  "non_lora_trainable": [],
+  "router_trainable": [],
+  "router_lora_modules": []
+ },
+ "objective": "official SecPO sigmoid loss, summed response log-probs, ref = base on clean prompt",
+ "secpo_reference": "github.com/Sizhe-Chen/SecPO@da0372a0e598badf4e51c98c175a962147cac2ac",
+ "data": "/workspace/moe-injection-interp/data/secpo_olmoe_v1/pairs.jsonl",
+ "data_sha256": "ad30871865d1ec17d1efe1565a0569913554c76d325d1c41db2b6483c236248a",
+ "split": "secpo_olmoe_v1_grouped_v1",
+ "n_train": 556,
+ "n_val": 98,
+ "effective_batch": 16,
+ "steps_per_epoch": 35,
+ "total_steps": 175,
+ "warmup_steps": 6,
+ "lr_schedule": "linear warmup + linear decay",
+ "optimizer": "AdamW (betas 0.9/0.999, eps 1e-8, weight_decay 0)",
+ "gradient_checkpointing": true,
+ "torch": "2.14.1+cu130",
+ "transformers": "5.22.1",
+ "peft": "0.21.3",
+ "gpu": "NVIDIA L40S"
+}

@@ -1,0 +1,22 @@
+[split] secpo_olmoe_v1_grouped_v1 using ids: 1275 train / 225 val
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:15, 11.66it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:07, 22.34it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:06, 24.37it/s]Loading weights:  21%|██        | 37/179 [00:01<00:05, 24.52it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:05, 25.42it/s]Loading weights:  33%|███▎      | 59/179 [00:02<00:04, 26.08it/s]Loading weights:  39%|███▉      | 70/179 [00:02<00:04, 26.28it/s]Loading weights:  45%|████▌     | 81/179 [00:03<00:03, 26.22it/s]Loading weights:  51%|█████▏    | 92/179 [00:03<00:03, 25.63it/s]Loading weights:  58%|█████▊    | 103/179 [00:04<00:02, 25.39it/s]Loading weights:  64%|██████▎   | 114/179 [00:04<00:02, 25.10it/s]Loading weights:  70%|██████▉   | 125/179 [00:04<00:02, 25.78it/s]Loading weights:  76%|███████▌  | 136/179 [00:05<00:01, 25.65it/s]Loading weights:  82%|████████▏ | 147/179 [00:05<00:01, 24.99it/s]Loading weights:  88%|████████▊ | 158/179 [00:06<00:00, 24.56it/s]Loading weights:  94%|█████████▍| 169/179 [00:06<00:00, 24.01it/s]Loading weights: 100%|██████████| 179/179 [00:06<00:00, 26.19it/s]
+[data] train 1275 / val 225 pairs; longest sequence 641 tokens; prompt-truncated 0
+[ref] computed 1500 reference entries in 222.5s -> /workspace/out/secpo_v2_smoke/ref_logps.json
+[lora] experts: fused 3D experts (target_parameters); {"trainable": 121634816, "frozen": 6919161856, "trainable_pct": 1.728, "trainable_by_group": {"attention": 4194304, "experts": 117440512, "other": 0}, "non_lora_trainable": [], "router_trainable": [], "router_lora_modules": []}
+[smoke] PASS only_lora_trainable {"n": 0}
+[smoke] PASS router_frozen_and_unwrapped {}
+[smoke] PASS attention_and_expert_lora_present {"attention": 4194304, "experts": 117440512, "other": 0}
+[smoke] PASS online_reference_equals_frozen_base {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] PASS ref_cache_within_batch_shape_noise {"max_abs_diff": 0.0001, "mean_abs_diff": 0.0, "bound": 5.0}
+[smoke] PASS policy_equals_base_at_init {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] PASS loss_finite {"loss": 5.4735, "secpo_margin": -54.075, "log2": 0.6931}
+[smoke] PASS grad_on_every_attention_lora_B {"nonzero": 64, "total": 64}
+[smoke] PASS grad_on_every_expert_lora_B {"nonzero": 32, "total": 32}
+[smoke] PASS no_grad_on_frozen_params {"n": 0}
+[smoke] PASS grad_norm_finite_positive {"grad_norm": 2.4778}
+[smoke] PASS optimizer_step_moves_lora_B {"moved": 96, "total": 96}
+[smoke] PASS router_unchanged {}
+[smoke] PASS loss_decreases_after_one_step {"before": 5.47353, "after": 4.02574}
+[smoke] PASS reference_unchanged_after_step {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] INFO expert_delta_realization_after_one_step {"tensors": 32, "rel_error": 0.0002, "cosine": 1.0, "intended_norm": 0.189655}
+[smoke] ALL CHECKS PASSED -> /workspace/out/secpo_v2_smoke/smoke_report.json

@@ -16,3 +16,12 @@ dist/
 .DS_Store
 # large generated datasets (regenerate with scripts/build_*.py)
 data/secpo_qwen36_trainset/secpo_trainset.jsonl
+# trained LoRA adapters (~490 MB each; keep on the GPU box / copy separately)
+# covers adapter/ and per-epoch checkpoints like adapter_epoch3/
+experiments/modal/outputs/**/adapter*/
+# safety net: never commit model weights / checkpoints anywhere
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.gguf

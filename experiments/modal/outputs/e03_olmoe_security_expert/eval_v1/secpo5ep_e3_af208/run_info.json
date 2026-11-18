@@ -1,0 +1,32 @@
+{
+  "step": "e03_generate",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "bfloat16",
+  "device": "cuda",
+  "tiny_random": false,
+  "adapter": "experiments/modal/outputs/e03_olmoe_security_expert/secpo_v1_5ep/adapter_epoch3",
+  "adapter_sha256": "117a0aa5588a5ffea49ce1ef3a243c69e44f792be8d7c61f43d767601b877de3",
+  "split": null,
+  "split_file": null,
+  "gpu": "NVIDIA L40S",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "data": "data/alpacafarm_secalign_208.jsonl",
+  "data_sha256": "3ceca3c350bb4bcb244512e9f1ff8a26fe911aa3d282e003844b7294ce3aab28",
+  "subset": "all",
+  "n_records": 208,
+  "n_generations": 416,
+  "conditions": [
+    "clean",
+    "injection"
+  ],
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "batch_size": 32,
+  "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+  "load_seconds": 7.7,
+  "generate_seconds": 1904.7,
+  "finished_with_eos": 408
+}

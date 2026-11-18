@@ -14,6 +14,13 @@ Usage:
     python experiments/modal/experiments/e03_generate.py --subset pilot --out OUT_DIR              # 20 x 2 prompts
     python experiments/modal/experiments/e03_generate.py --subset all --out OUT_DIR                # 500 x 2 prompts
     python experiments/modal/experiments/e03_generate.py --tiny --limit 2 --out /tmp/x             # CPU check, noise
+    # Step 3 evaluation: any dataset with clean/injection variants (e.g. data/alpacafarm_secalign_208.jsonl), optionally
+    # restricted to one side of the grouped split, optionally with a SecPO LoRA adapter (applied unmerged, i.e. the
+    # same forward pass as training):
+    python experiments/modal/experiments/e03_generate.py --subset all --split val --adapter RUN/adapter --out OUT_DIR
+    # SecPO's rejected side, y_l = f_undef(z'): the seed task alone (metadata.seed_task, the source rejected_input,
+    # whitespace-stripped) as one user message, no system message (paper Algorithm 1, line 13):
+    python experiments/modal/experiments/e03_generate.py --subset all --conditions seed_task --out OUT_DIR
 """
 
 from __future__ import annotations
@@ -31,6 +38,14 @@ sys.path.insert(0, str(REPO))
 OLMOE = {"model_id": "allenai/OLMoE-1B-7B-0125-Instruct", "revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
          "dtype": "bfloat16", "device": "auto"}
 CONDITIONS = ("clean", "injection")
+ALL_CONDITIONS = CONDITIONS + ("seed_task",)
+
+
+def messages(r: dict, cond: str) -> list[dict]:
+    """clean / injection: the record's variants. seed_task: SecPO's z' alone (no trusted task, no clean data)."""
+    if cond == "seed_task":
+        return [{"role": "user", "content": r["metadata"]["seed_task"].strip()}]
+    return r["variants"][cond]["messages"]
 
 
 def repetition(text: str, n: int = 3) -> float:
@@ -48,8 +63,19 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-new-tokens", type=int, default=512)
     ap.add_argument("--batch-size", type=int, default=32)
+    ap.add_argument("--conditions", default=",".join(CONDITIONS), help=f"comma-separated, from {ALL_CONDITIONS}")
+    ap.add_argument("--shard", default=None, help="K/N: keep the K-th of N contiguous chunks (parallel runs; merge after)")
+    ap.add_argument("--dtype", default=None, help="override model dtype (default bfloat16). Use float32 for adapters "
+                    "trained in float32: PEFT adds the expert LoRA delta into the fused weight in the model dtype")
     ap.add_argument("--tiny", action="store_true", help="tiny random OLMoE on CPU (pipeline check; output is noise)")
+    ap.add_argument("--adapter", default=None, help="PEFT LoRA adapter dir (e.g. from e03_secpo_train.py); unmerged")
+    ap.add_argument("--split", choices=["train", "val"], default=None, help="keep only this side of --split-file")
+    ap.add_argument("--split-file", default=str(REPO / "experiments" / "modal" / "artifacts" / "splits" /
+                                                "secpo_olmoe_v1_grouped_v1.json"))
     args = ap.parse_args()
+    conditions = tuple(c for c in args.conditions.split(",") if c)
+    if not conditions or set(conditions) - set(ALL_CONDITIONS):
+        raise SystemExit(f"--conditions must be a non-empty subset of {ALL_CONDITIONS}")
 
     import torch
     import transformers
@@ -63,22 +89,37 @@ def main() -> None:
     rows = [json.loads(l) for l in raw.decode().splitlines()]
     if args.subset == "pilot":
         rows = [r for r in rows if r["metadata"]["pilot"]]
+    if args.split:
+        keep = set(json.loads(Path(args.split_file).read_text())["ids"][args.split])
+        rows = [r for r in rows if r["id"] in keep]
     rows = rows[: args.limit] if args.limit else rows
+    if args.shard:
+        k, n = map(int, args.shard.split("/"))
+        size = -(-len(rows) // n)
+        rows = rows[k * size: (k + 1) * size]
     model_cfg = {**OLMOE, **({"tiny_random": True, "device": "cpu", "dtype": "float32"} if args.tiny else {})}
+    if args.dtype:
+        model_cfg["dtype"] = args.dtype
     cfg = config_from_dict({"model": model_cfg, "prompt": {"add_generation_prompt": True},
                             "generation": {"max_new_tokens": args.max_new_tokens, "do_sample": False},
                             "trace": {"enabled": False}})
     t0 = time.time()
     lm = load_model(cfg.model)
     load_s = time.time() - t0
+    adapter_sha = None
+    if args.adapter:
+        from peft import PeftModel
+
+        lm.model = PeftModel.from_pretrained(lm.model, args.adapter).eval()
+        adapter_sha = hashlib.sha256((Path(args.adapter) / "adapter_model.safetensors").read_bytes()).hexdigest()
     tok, gc = lm.tokenizer, _generation_config(lm.model, cfg, lm.tokenizer)
     eos = _eos_ids(gc)
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     recs, t1 = [], time.time()
-    for cond in CONDITIONS:
-        rendered = [render_prompt(tok, r["variants"][cond]["messages"], True, None, {}) for r in rows]
+    for cond in conditions:
+        rendered = [render_prompt(tok, messages(r, cond), True, None, {}) for r in rows]
         for b in range(0, len(rows), args.batch_size):
             chunk = rendered[b: b + args.batch_size]
             ids_list = generate_batch(lm.model, [x.input_ids for x in chunk], gc, lm.device)
@@ -95,12 +136,14 @@ def main() -> None:
     info = {
         "step": "e03_generate", "model": lm.info["model_id"], "requested_revision": lm.info["requested_revision"],
         "resolved_commit_hash": lm.info["resolved_commit_hash"], "dtype": lm.info["dtype"], "device": lm.info["device"],
-        "tiny_random": args.tiny, "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+        "tiny_random": args.tiny, "adapter": args.adapter, "adapter_sha256": adapter_sha,
+        "split": args.split, "split_file": args.split_file if args.split else None, "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "torch": torch.__version__, "transformers": transformers.__version__,
-        "data": args.data, "data_sha256": hashlib.sha256(raw).hexdigest(), "subset": args.subset,
-        "n_records": len(rows), "n_generations": len(recs), "conditions": list(CONDITIONS),
+        "data": args.data, "data_sha256": hashlib.sha256(raw).hexdigest(), "subset": args.subset, "shard": args.shard,
+        "n_records": len(rows), "n_generations": len(recs), "conditions": list(conditions),
         "max_new_tokens": args.max_new_tokens, "do_sample": False, "batch_size": args.batch_size,
-        "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+        "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: "
+                         "user = metadata.seed_task.strip(), no system; add_generation_prompt",
         "load_seconds": round(load_s, 1), "generate_seconds": round(time.time() - t1, 1),
         "finished_with_eos": sum(r["finish_reason"] == "stop" for r in recs),
     }

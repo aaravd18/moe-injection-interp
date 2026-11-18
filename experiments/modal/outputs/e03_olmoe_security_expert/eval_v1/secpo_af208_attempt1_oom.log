@@ -1,0 +1,117 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   1%|          | 2/179 [00:00<00:39,  4.45it/s]Loading weights:   2%|▏         | 4/179 [00:04<03:31,  1.21s/it]Loading weights:   3%|▎         | 5/179 [00:04<02:39,  1.09it/s]Loading weights:   8%|▊         | 15/179 [00:08<01:17,  2.10it/s]Loading weights:   9%|▉         | 16/179 [00:08<01:13,  2.21it/s]Loading weights:  15%|█▍        | 26/179 [00:12<01:00,  2.51it/s]Loading weights:  15%|█▌        | 27/179 [00:12<00:58,  2.60it/s]Loading weights:  21%|██        | 37/179 [00:16<00:54,  2.60it/s]Loading weights:  21%|██        | 38/179 [00:16<00:52,  2.66it/s]Loading weights:  27%|██▋       | 48/179 [00:19<00:47,  2.76it/s]Loading weights:  27%|██▋       | 49/179 [00:20<00:45,  2.83it/s]Loading weights:  33%|███▎      | 59/179 [00:23<00:42,  2.79it/s]Loading weights:  34%|███▎      | 60/179 [00:23<00:41,  2.87it/s]Loading weights:  39%|███▉      | 70/179 [00:27<00:38,  2.85it/s]Loading weights:  40%|███▉      | 71/179 [00:27<00:37,  2.89it/s]Loading weights:  45%|████▌     | 81/179 [00:30<00:32,  3.04it/s]Loading weights:  46%|████▌     | 82/179 [00:31<00:32,  3.03it/s]Loading weights:  51%|█████▏    | 92/179 [00:34<00:28,  3.08it/s]Loading weights:  52%|█████▏    | 93/179 [00:34<00:27,  3.16it/s]Loading weights:  58%|█████▊    | 103/179 [00:38<00:25,  3.03it/s]Loading weights:  58%|█████▊    | 104/179 [00:38<00:24,  3.10it/s]Loading weights:  64%|██████▎   | 114/179 [00:41<00:21,  3.05it/s]Loading weights:  64%|██████▍   | 115/179 [00:41<00:20,  3.10it/s]Loading weights:  70%|██████▉   | 125/179 [00:45<00:17,  3.00it/s]Loading weights:  70%|███████   | 126/179 [00:45<00:17,  3.03it/s]Loading weights:  76%|███████▌  | 136/179 [00:48<00:14,  2.98it/s]Loading weights:  77%|███████▋  | 137/179 [00:49<00:13,  3.04it/s]Loading weights:  82%|████████▏ | 147/179 [00:52<00:10,  3.03it/s]Loading weights:  83%|████████▎ | 148/179 [00:52<00:10,  3.05it/s]Loading weights:  88%|████████▊ | 158/179 [00:56<00:07,  2.99it/s]Loading weights:  89%|████████▉ | 159/179 [00:56<00:06,  3.04it/s]Loading weights:  94%|█████████▍| 169/179 [00:59<00:03,  2.95it/s]Loading weights:  95%|█████████▍| 170/179 [01:00<00:02,  3.08it/s]Loading weights: 100%|██████████| 179/179 [01:00<00:00,  2.98it/s]
+clean: 32/208  (38s)
+clean: 64/208  (74s)
+clean: 96/208  (120s)
+clean: 128/208  (166s)
+clean: 160/208  (214s)
+clean: 192/208  (265s)
+clean: 208/208  (285s)
+injection: 32/208  (328s)
+injection: 64/208  (357s)
+injection: 96/208  (394s)
+injection: 128/208  (439s)
+[W1118 06:54:10.046560996 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 1073741824 bytes (free: 471859200, total: 47667740672).
+[W1118 06:54:10.420842264 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 1073741824 bytes (free: 484442112, total: 47667740672).
+Traceback (most recent call last):
+  File "/workspace/moe-injection-interp/experiments/modal/experiments/e03_generate.py", line 130, in <module>
+    main()
+  File "/workspace/moe-injection-interp/experiments/modal/experiments/e03_generate.py", line 101, in main
+    ids_list = generate_batch(lm.model, [x.input_ids for x in chunk], gc, lm.device)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/moe-injection-interp/moe_interp/runner.py", line 115, in generate_batch
+    gen = model.generate(input_ids=ids, attention_mask=mask, generation_config=gc)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/peft/peft_model.py", line 2242, in generate
+    outputs = self.base_model.generate(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/generation/utils.py", line 3000, in generate
+    result = decoding_method(
+             ^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/generation/utils.py", line 3228, in _sample
+    outputs = model_forward(**model_inputs, return_dict=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/utils/generic.py", line 943, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/models/olmoe/modeling_olmoe.py", line 626, in forward
+    outputs: MoeModelOutputWithPast = self.model(
+                                      ^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/utils/generic.py", line 1081, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/utils/output_capturing.py", line 287, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/models/olmoe/modeling_olmoe.py", line 481, in forward
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/modeling_layers.py", line 111, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/models/olmoe/modeling_olmoe.py", line 390, in forward
+    hidden_states = self.mlp(hidden_states)
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/models/olmoe/modeling_olmoe.py", line 348, in forward
+    final_hidden_states = self.experts(hidden_states, top_k_index, top_k_weights).reshape(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/peft/tuners/lora/layer.py", line 2712, in forward
+    result = self.base_layer(x, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/peft/tuners/lora/layer.py", line 2712, in forward
+    result = self.base_layer(x, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1783, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1794, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/integrations/moe.py", line 602, in forward
+    return experts_forward(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/venv/lib/python3.12/site-packages/transformers/integrations/moe.py", line 159, in batched_mm_experts_forward
+    selected_weights = self.down_proj[expert_ids]
+                       ~~~~~~~~~~~~~~^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1024.00 MiB. GPU 0 has a total capacity of 44.39 GiB of which 462.00 MiB is free. Process 2744 has 22.32 GiB memory in use. Including non-PyTorch memory, this process has 21.61 GiB memory in use. Of the allocated memory 19.14 GiB is allocated by PyTorch, and 1.97 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

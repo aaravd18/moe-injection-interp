@@ -21,6 +21,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "nbformat>=5", "nbclient>=0.7", "ipykernel>=6"]
+# E03 SecPO LoRA training (target_parameters on fused MoE experts; tested with 0.21.3)
+train = ["peft==0.21.3"]
 
 [project.scripts]
 moe-interp = "moe_interp.cli:main"

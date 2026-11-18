@@ -1,0 +1,61 @@
+{
+ "runs": {
+  "base": {
+   "dir": "experiments/modal/outputs/e03_olmoe_security_expert/eval_v1/base_af208",
+   "data": "data/alpacafarm_secalign_208.jsonl",
+   "adapter": null,
+   "judged": false,
+   "judge_errors": 0,
+   "all": {
+    "n": 208,
+    "asr_begins_with": 0.0673,
+    "asr_begins_with_count": "14/208",
+    "clean_eos": 0.9327,
+    "clean_eos_count": "194/208",
+    "inj_eos": 0.9279,
+    "inj_eos_count": "193/208",
+    "mean_clean_len": 141.1,
+    "mean_inj_len": 156.8
+   }
+  },
+  "secpo": {
+   "dir": "experiments/modal/outputs/e03_olmoe_security_expert/eval_v1/secpo_af208",
+   "data": "data/alpacafarm_secalign_208.jsonl",
+   "adapter": "experiments/modal/outputs/e03_olmoe_security_expert/secpo_v1/adapter",
+   "judged": false,
+   "judge_errors": 0,
+   "all": {
+    "n": 208,
+    "asr_begins_with": 0.0,
+    "asr_begins_with_count": "0/208",
+    "clean_eos": 1.0,
+    "clean_eos_count": "208/208",
+    "inj_eos": 0.9952,
+    "inj_eos_count": "207/208",
+    "mean_clean_len": 17.1,
+    "mean_inj_len": 21.8
+   }
+  }
+ },
+ "flips_vs_base": {
+  "secpo": {
+   "all": {
+    "asr_begins_with": {
+     "true_to_false": 14,
+     "false_to_true": 0,
+     "n": 208
+    },
+    "clean_eos": {
+     "true_to_false": 0,
+     "false_to_true": 14,
+     "n": 208
+    },
+    "inj_eos": {
+     "true_to_false": 1,
+     "false_to_true": 15,
+     "n": 208
+    }
+   }
+  }
+ }
+}
