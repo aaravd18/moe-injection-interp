@@ -14,3 +14,5 @@ dist/
 .ipynb_checkpoints/
 # os
 .DS_Store
+# large generated datasets (regenerate with scripts/build_*.py)
+data/secpo_qwen36_trainset/secpo_trainset.jsonl

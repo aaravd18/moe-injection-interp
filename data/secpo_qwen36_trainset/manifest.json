@@ -1,0 +1,65 @@
+{
+  "dataset": "secpo_qwen36_trainset",
+  "generator": "scripts/build_secpo_trainset.py",
+  "generator_sha256": "186ab43d7bfc386fea2161ee992081acba1680e30661ad995e7a431bb7263139",
+  "source": {
+    "repo": "Sizhe-Chen/Qwen3.6-27B-Instruct-SecPO-trainset",
+    "revision": "0cbfd6e6a2c2966dbccf4fa89b6ea7fe20c8703e",
+    "file": "preference_Qwen3.6-27B_dpo_NaiveCompletion_randpos_synthetic_alpaca_optimized.json",
+    "sha256": "cd349baa406eae0bf7e4ee2d938d087d6656469d88076d68ba76baeb7e5ec669",
+    "n_records": 19157,
+    "paper": "arXiv:2610.41998 (SecPO)"
+  },
+  "layout": "system = trusted instruction, user = untrusted data (as data/sep_600.jsonl)",
+  "conditions": [
+    "clean",
+    "injection"
+  ],
+  "n_records": 19157,
+  "position": {
+    "start": 8719,
+    "end": 10438
+  },
+  "completion_style": 1181,
+  "seed_verbatim_in_injection": 11982,
+  "clean_reconstruction": {
+    "chosen_data": 19149,
+    "card_recipe_fallback": 3,
+    "chosen_data_stripped": 5
+  },
+  "outputs": {
+    "secpo_trainset.jsonl": "05fb5e661c748f68c603351d7b3ea8220f1702d8b56cb667542d35f03beaad63",
+    "sample.jsonl": "b68f2071eade88ad8b8ff1981b65d95052d40df76d6e67d1f8bb1c114c0285d7"
+  },
+  "sample": {
+    "n": 25,
+    "seed": 0,
+    "source_indices": [
+      1326,
+      2416,
+      3107,
+      3236,
+      4563,
+      4579,
+      4815,
+      7157,
+      8208,
+      8484,
+      9235,
+      9938,
+      10162,
+      10819,
+      11732,
+      12623,
+      13268,
+      13781,
+      15471,
+      15617,
+      15922,
+      16537,
+      16753,
+      17451,
+      19116
+    ]
+  }
+}

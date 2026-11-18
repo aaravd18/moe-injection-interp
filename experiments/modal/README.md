@@ -35,6 +35,7 @@ modal run experiments/modal/experiments/e01_sep_baseline_outputs.py --help     #
 |----|------|---------|
 | e01 | Baseline Mellum outputs on 20 SEP items, clean vs benign vs injection, read by hand | [logbooks/e01_sep_baseline_outputs.md](logbooks/e01_sep_baseline_outputs.md) |
 | e02 | Activation steering against injection: injection−benign direction at the last prompt token, val sweep, test vs random control | [logbooks/e02_sep_steering.md](logbooks/e02_sep_steering.md) |
+| e03 | OLMoE security expert. Step 0: SecPO training-set conversion and inspection (no training yet) | [logbooks/e03_olmoe_security_expert.md](logbooks/e03_olmoe_security_expert.md) |
 
 ## Reusable artifacts (`artifacts/`)
 - `splits/sep600_witness_grouped_v1.json`: train/val/test item ids for `data/sep_600.jsonl`, grouped by probe
