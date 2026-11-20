@@ -1,0 +1,81 @@
+{
+ "step": "e03_secpo_train",
+ "method": "security_expert",
+ "optimizer_steps": 80,
+ "load_seconds": 6.3,
+ "ref_cache_seconds": 0.0,
+ "ref_cache_reused": true,
+ "train_seconds": 1124.5,
+ "total_seconds": 1228.7,
+ "mem_alloc_gb": 26.97,
+ "mem_peak_gb": 36.31,
+ "mem_reserved_gb": 46.55,
+ "expert_delta_realization": null,
+ "val_step0": {
+  "all": {
+   "n": 225,
+   "loss": 6.528756704070191,
+   "secpo_margin": -63.964168531629774,
+   "secpo_acc": 0.04,
+   "policy_logratio_adv": 105.34702972835964,
+   "policy_prefers_chosen_adv": 0.8444444444444444,
+   "chosen_reward": -2.6858141512403058,
+   "rejected_reward": 3.710602825333675
+  },
+  "strict": {
+   "n": 225,
+   "loss": 6.528756704070191,
+   "secpo_margin": -63.964168531629774,
+   "secpo_acc": 0.04,
+   "policy_logratio_adv": 105.34702972835964,
+   "policy_prefers_chosen_adv": 0.8444444444444444,
+   "chosen_reward": -2.6858141512403058,
+   "rejected_reward": 3.710602825333675
+  }
+ },
+ "val_final": {
+  "all": {
+   "n": 225,
+   "loss": 0.23475885082662631,
+   "secpo_margin": 250.80632179260255,
+   "secpo_acc": 0.96,
+   "policy_logratio_adv": 420.11752062479655,
+   "policy_prefers_chosen_adv": 0.9733333333333334,
+   "chosen_reward": -2.9569298951927987,
+   "rejected_reward": -28.03756252143118
+  },
+  "strict": {
+   "n": 225,
+   "loss": 0.23475885082662631,
+   "secpo_margin": 250.80632179260255,
+   "secpo_acc": 0.96,
+   "policy_logratio_adv": 420.11752062479655,
+   "policy_prefers_chosen_adv": 0.9733333333333334,
+   "chosen_reward": -2.9569298951927987,
+   "rejected_reward": -28.03756252143118
+  }
+ },
+ "trainable_params": 100663312,
+ "trainable_pct": 1.434,
+ "se_alpha_final": [
+  0.100204,
+  0.100232,
+  0.100387,
+  0.100588,
+  0.100623,
+  0.100791,
+  0.100904,
+  0.100967,
+  0.100984,
+  0.1008,
+  0.10082,
+  0.100582,
+  0.100477,
+  0.100575,
+  0.100558,
+  0.100147
+ ],
+ "security_expert_sha256": "0564ced807be83923116721167cebb689a3ed6e863a8db371a2fee0fdcb90354",
+ "adapter_dir": "/workspace/out/se_lr4e-5/security_expert",
+ "config": "config.json"
+}

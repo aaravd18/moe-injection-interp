@@ -1,0 +1,364 @@
+{
+ "checks": {
+  "only_security_experts_trainable": {
+   "ok": true,
+   "n_bad": 0
+  },
+  "router_frozen": {
+   "ok": true
+  },
+  "one_expert_per_moe_layer_with_olmoe_expert_shape": {
+   "ok": true,
+   "n_experts": 16,
+   "trainable": 100663312,
+   "expected": 100663312,
+   "trainable_pct": 1.434
+  },
+  "down_proj_zero_alpha_nonzero_at_init": {
+   "ok": true,
+   "alphas": [
+    0.1
+   ]
+  },
+  "policy_equals_base_at_init": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "tol": 0.001
+  },
+  "logits_identical_to_base_at_init": {
+   "ok": true,
+   "max_abs_diff": 0.0
+  },
+  "router_topk_identical_to_base_at_init": {
+   "ok": true,
+   "layers": 16
+  },
+  "online_reference_equals_frozen_base": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "tol": 0.001
+  },
+  "ref_cache_within_batch_shape_noise": {
+   "ok": true,
+   "max_abs_diff": 0.0001,
+   "mean_abs_diff": 0.0,
+   "bound": 5.0
+  },
+  "loss_finite": {
+   "ok": true,
+   "loss": 5.4732,
+   "log2": 0.6931
+  },
+  "step0_grad_on_every_down_proj": {
+   "ok": true,
+   "nonzero": 16,
+   "total": 16
+  },
+  "step0_no_grad_on_gate_up_and_alpha_as_expected_from_zero_init": {
+   "ok": true,
+   "gate_up_nonzero": 0,
+   "alpha_nonzero": 0
+  },
+  "no_grad_on_frozen_params": {
+   "ok": true,
+   "n": 0
+  },
+  "grad_norm_finite_positive": {
+   "ok": true,
+   "grad_norm": 40.921066
+  },
+  "step0_update_moves_every_down_proj": {
+   "ok": true,
+   "gate_up_proj": 0,
+   "down_proj": 16,
+   "alpha": 0
+  },
+  "step1_grad_flows_to_every_gate_up_and_alpha": {
+   "ok": true,
+   "gate_up_nonzero": 16,
+   "alpha_nonzero": 16,
+   "down_nonzero": 16,
+   "grad_norm": 4.816763
+  },
+  "step1_update_moves_every_parameter": {
+   "ok": true,
+   "gate_up_proj": 16,
+   "down_proj": 16,
+   "alpha": 16
+  },
+  "loss_decreases_after_two_steps": {
+   "ok": true,
+   "losses": [
+    5.47321,
+    0.28826,
+    0.02271
+   ]
+  },
+  "security_expert_contribution_nonzero_after_update": {
+   "ok": true,
+   "ratio_mean": 0.008823907301023474,
+   "ratio_max": 0.018307628272758794,
+   "tokens": 3795.0
+  },
+  "frozen_weights_bit_identical_after_updates": {
+   "ok": true,
+   "n_frozen_tensors": 179,
+   "changed": []
+  },
+  "reference_unchanged_after_updates": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "tol": 0.001
+  },
+  "base_routing_unchanged_after_updates": {
+   "ok": true
+  },
+  "save_reload_round_trip": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "sha256": "4fa871dbf4ea"
+  }
+ },
+ "all_ok": true,
+ "n_examples": 8,
+ "grads": [
+  {
+   "gate_up_proj": 0,
+   "down_proj": 16,
+   "alpha": 0,
+   "grad_norm": 40.92106628417969
+  },
+  {
+   "gate_up_proj": 16,
+   "down_proj": 16,
+   "alpha": 16,
+   "grad_norm": 4.816763401031494
+  }
+ ],
+ "losses": [
+  5.473214626312256,
+  0.2882619798183441,
+  0.022707859054207802
+ ],
+ "contribution_after_two_steps": {
+  "tokens": 3795.0,
+  "ratio_mean": 0.008823907301023474,
+  "ratio_max": 0.018307628272758794,
+  "layers": [
+   {
+    "layer": 0,
+    "se_norm": 0.0014740922097510151,
+    "moe_norm": 0.15381369224608782,
+    "ratio": 0.009583621511358057,
+    "cos": -0.0015976379811352508
+   },
+   {
+    "layer": 1,
+    "se_norm": 0.0019133464931241934,
+    "moe_norm": 0.7150994608904025,
+    "ratio": 0.0026756368837725026,
+    "cos": -0.0005444605036762647
+   },
+   {
+    "layer": 2,
+    "se_norm": 0.002410567854854043,
+    "moe_norm": 2.8036122562037185,
+    "ratio": 0.0008598078602060742,
+    "cos": -0.0006204212472590195
+   },
+   {
+    "layer": 3,
+    "se_norm": 0.003164312026796367,
+    "moe_norm": 0.7590973222502913,
+    "ratio": 0.004168519548212848,
+    "cos": 0.00044042542725974997
+   },
+   {
+    "layer": 4,
+    "se_norm": 0.0041661455214249896,
+    "moe_norm": 0.39894809649075097,
+    "ratio": 0.01044282591663293,
+    "cos": 0.002450029439609846
+   },
+   {
+    "layer": 5,
+    "se_norm": 0.0052734038818610185,
+    "moe_norm": 0.2880440766709081,
+    "ratio": 0.018307628272758794,
+    "cos": 0.004063262090038135
+   },
+   {
+    "layer": 6,
+    "se_norm": 0.00618764648048861,
+    "moe_norm": 0.4558949561979718,
+    "ratio": 0.013572526733113563,
+    "cos": 0.0019962756185242726
+   },
+   {
+    "layer": 7,
+    "se_norm": 0.006586147518326693,
+    "moe_norm": 0.37896412597220874,
+    "ratio": 0.01737934296928593,
+    "cos": 0.0032714482344254137
+   },
+   {
+    "layer": 8,
+    "se_norm": 0.007245460145691788,
+    "moe_norm": 0.7090754514665186,
+    "ratio": 0.01021817936399665,
+    "cos": 0.0017742062299261551
+   },
+   {
+    "layer": 9,
+    "se_norm": 0.008489760955388292,
+    "moe_norm": 1.2669227708880277,
+    "ratio": 0.006701087983001158,
+    "cos": -0.0006703566914249456
+   },
+   {
+    "layer": 10,
+    "se_norm": 0.010145912000585093,
+    "moe_norm": 1.3066630593331334,
+    "ratio": 0.007764750008133807,
+    "cos": 0.0033242318252187236
+   },
+   {
+    "layer": 11,
+    "se_norm": 0.012759041820468815,
+    "moe_norm": 1.3628239407126097,
+    "ratio": 0.009362208455038745,
+    "cos": 0.00391302335871741
+   },
+   {
+    "layer": 12,
+    "se_norm": 0.014994862539043545,
+    "moe_norm": 1.67681835012469,
+    "ratio": 0.008942448976616049,
+    "cos": 0.006985502877171498
+   },
+   {
+    "layer": 13,
+    "se_norm": 0.01786423877304114,
+    "moe_norm": 2.046390693265309,
+    "ratio": 0.008729632533920584,
+    "cos": 0.008547410708374755
+   },
+   {
+    "layer": 14,
+    "se_norm": 0.01995942143759714,
+    "moe_norm": 2.6765862522519988,
+    "ratio": 0.0074570439943057645,
+    "cos": 0.007006687419389377
+   },
+   {
+    "layer": 15,
+    "se_norm": 0.020487974808204447,
+    "moe_norm": 4.0835021374858025,
+    "ratio": 0.005017255806022136,
+    "cos": 0.0006393123845902446
+   }
+  ]
+ },
+ "alphas_after_two_steps": [
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119,
+  0.100119
+ ],
+ "step_seconds": 10.23,
+ "mem_alloc_gb": 27.48,
+ "mem_peak_gb": 35.58,
+ "mem_reserved_gb": 43.49,
+ "config": {
+  "args": {
+   "data": "data/secpo_olmoe_v2/pairs.jsonl",
+   "split": "/workspace/repo/experiments/modal/artifacts/splits/secpo_olmoe_v1_grouped_v1.json",
+   "out": "/workspace/out/secpo_se_v1_smoke",
+   "smoke": true,
+   "tiny": false,
+   "dtype": "float32",
+   "limit": null,
+   "strict_only": false,
+   "beta": 0.1,
+   "lr": 0.00016,
+   "epochs": 1.0,
+   "micro_batch": 8,
+   "grad_accum": 2,
+   "max_len": 1024,
+   "lora_r": 16,
+   "lora_alpha": 4.0,
+   "warmup_ratio": 0.03,
+   "max_grad_norm": 1.0,
+   "eval_every": 10,
+   "save_every_epoch": false,
+   "eval_batch": 16,
+   "no_grad_ckpt": false,
+   "seed": 42,
+   "ref_cache": "/workspace/out/secpo_se_v1/ref_logps.json",
+   "method": "security_expert",
+   "se_alpha_init": 0.1,
+   "se_init_std": null
+  },
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "dtype": "float32",
+  "device": "cuda",
+  "experts": "always-active security expert per MoE layer",
+  "method": "security_expert",
+  "lora": null,
+  "security_expert": {
+   "alpha_init": 0.1,
+   "init_std": 0.02,
+   "init_seed": 42,
+   "base_model": "allenai/OLMoE-1B-7B-0125-Instruct",
+   "base_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e"
+  },
+  "params": {
+   "trainable": 100663312,
+   "frozen": 6919161856,
+   "trainable_pct": 1.434,
+   "trainable_by_group": {
+    "security_expert": 100663312,
+    "gate_up_proj": 67108864,
+    "down_proj": 33554432,
+    "alpha": 16
+   },
+   "security_expert_params_total": 100663312,
+   "n_security_experts": 16,
+   "non_security_expert_trainable": [],
+   "router_trainable": []
+  },
+  "objective": "official SecPO sigmoid loss, summed response log-probs, ref = base on clean prompt",
+  "secpo_reference": "github.com/Sizhe-Chen/SecPO@da0372a0e598badf4e51c98c175a962147cac2ac",
+  "data": "data/secpo_olmoe_v2/pairs.jsonl",
+  "data_sha256": "d6d3b74f26bcde30e33540dd772de17451326dd3e40c04a21cee6729fa5faffd",
+  "split": "secpo_olmoe_v1_grouped_v1",
+  "n_train": 1275,
+  "n_val": 225,
+  "effective_batch": 16,
+  "steps_per_epoch": 80,
+  "total_steps": 80,
+  "warmup_steps": 3,
+  "lr_schedule": "linear warmup + linear decay",
+  "optimizer": "AdamW (betas 0.9/0.999, eps 1e-8, weight_decay 0)",
+  "gradient_checkpointing": true,
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "peft": "0.21.3",
+  "gpu": "NVIDIA A100-SXM4-80GB"
+ },
+ "load_seconds": 6.3,
+ "ref_seconds": 0.0
+}

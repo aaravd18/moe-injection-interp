@@ -1,0 +1,29 @@
+[split] secpo_olmoe_v1_grouped_v1 using ids: 1275 train / 225 val
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:09, 18.01it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:04, 33.26it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:04, 35.04it/s]Loading weights:  21%|██        | 37/179 [00:01<00:03, 37.14it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:03, 40.11it/s]Loading weights:  33%|███▎      | 59/179 [00:01<00:03, 38.69it/s]Loading weights:  39%|███▉      | 70/179 [00:01<00:02, 37.11it/s]Loading weights:  45%|████▌     | 81/179 [00:02<00:02, 35.91it/s]Loading weights:  51%|█████▏    | 92/179 [00:02<00:02, 34.66it/s]Loading weights:  58%|█████▊    | 103/179 [00:02<00:02, 33.89it/s]Loading weights:  64%|██████▎   | 114/179 [00:03<00:01, 33.27it/s]Loading weights:  70%|██████▉   | 125/179 [00:03<00:01, 32.77it/s]Loading weights:  76%|███████▌  | 136/179 [00:03<00:01, 32.19it/s]Loading weights:  82%|████████▏ | 147/179 [00:04<00:01, 31.79it/s]Loading weights:  88%|████████▊ | 158/179 [00:04<00:00, 31.50it/s]Loading weights:  94%|█████████▍| 169/179 [00:05<00:00, 31.22it/s]Loading weights: 100%|██████████| 179/179 [00:05<00:00, 35.34it/s]
+[data] train 1275 / val 225 pairs; longest sequence 641 tokens; prompt-truncated 0
+[ref] reused 1500 reference entries in 0.0s -> /workspace/out/secpo_se_v1/ref_logps.json
+[security_expert] {"trainable": 100663312, "frozen": 6919161856, "trainable_pct": 1.434, "trainable_by_group": {"security_expert": 100663312, "gate_up_proj": 67108864, "down_proj": 33554432, "alpha": 16}, "security_expert_params_total": 100663312, "n_security_experts": 16, "non_security_expert_trainable": [], "router_trainable": []}
+[smoke] PASS only_security_experts_trainable {"n_bad": 0}
+[smoke] PASS router_frozen {}
+[smoke] PASS one_expert_per_moe_layer_with_olmoe_expert_shape {"n_experts": 16, "trainable": 100663312, "expected": 100663312, "trainable_pct": 1.434}
+[smoke] PASS down_proj_zero_alpha_nonzero_at_init {"alphas": [0.1]}
+[smoke] PASS policy_equals_base_at_init {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] PASS logits_identical_to_base_at_init {"max_abs_diff": 0.0}
+[smoke] PASS router_topk_identical_to_base_at_init {"layers": 16}
+[smoke] PASS online_reference_equals_frozen_base {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] PASS ref_cache_within_batch_shape_noise {"max_abs_diff": 0.0001, "mean_abs_diff": 0.0, "bound": 5.0}
+[smoke] PASS loss_finite {"loss": 5.4732, "log2": 0.6931}
+[smoke] PASS step0_grad_on_every_down_proj {"nonzero": 16, "total": 16}
+[smoke] PASS step0_no_grad_on_gate_up_and_alpha_as_expected_from_zero_init {"gate_up_nonzero": 0, "alpha_nonzero": 0}
+[smoke] PASS no_grad_on_frozen_params {"n": 0}
+[smoke] PASS grad_norm_finite_positive {"grad_norm": 40.921066}
+[smoke] PASS step0_update_moves_every_down_proj {"gate_up_proj": 0, "down_proj": 16, "alpha": 0}
+[smoke] PASS step1_grad_flows_to_every_gate_up_and_alpha {"gate_up_nonzero": 16, "alpha_nonzero": 16, "down_nonzero": 16, "grad_norm": 4.816763}
+[smoke] PASS step1_update_moves_every_parameter {"gate_up_proj": 16, "down_proj": 16, "alpha": 16}
+[smoke] PASS loss_decreases_after_two_steps {"losses": [5.47321, 0.28826, 0.02271]}
+[smoke] PASS security_expert_contribution_nonzero_after_update {"ratio_mean": 0.008823907301023474, "ratio_max": 0.018307628272758794, "tokens": 3795.0}
+[smoke] PASS frozen_weights_bit_identical_after_updates {"n_frozen_tensors": 179, "changed": []}
+[smoke] PASS reference_unchanged_after_updates {"max_abs_diff": 0.0, "tol": 0.001}
+[smoke] PASS base_routing_unchanged_after_updates {}
+[smoke] PASS save_reload_round_trip {"max_abs_diff": 0.0, "sha256": "4fa871dbf4ea"}
+[smoke] ALL CHECKS PASSED -> /workspace/out/secpo_se_v1_smoke/smoke_report.json

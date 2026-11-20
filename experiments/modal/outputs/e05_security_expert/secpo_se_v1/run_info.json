@@ -1,0 +1,81 @@
+{
+ "step": "e03_secpo_train",
+ "method": "security_expert",
+ "optimizer_steps": 80,
+ "load_seconds": 6.7,
+ "ref_cache_seconds": 0.0,
+ "ref_cache_reused": true,
+ "train_seconds": 1121.5,
+ "total_seconds": 1224.5,
+ "mem_alloc_gb": 26.98,
+ "mem_peak_gb": 36.31,
+ "mem_reserved_gb": 46.55,
+ "expert_delta_realization": null,
+ "val_step0": {
+  "all": {
+   "n": 225,
+   "loss": 6.528756704070191,
+   "secpo_margin": -63.964168531629774,
+   "secpo_acc": 0.04,
+   "policy_logratio_adv": 105.34702972835964,
+   "policy_prefers_chosen_adv": 0.8444444444444444,
+   "chosen_reward": -2.6858141512403058,
+   "rejected_reward": 3.710602825333675
+  },
+  "strict": {
+   "n": 225,
+   "loss": 6.528756704070191,
+   "secpo_margin": -63.964168531629774,
+   "secpo_acc": 0.04,
+   "policy_logratio_adv": 105.34702972835964,
+   "policy_prefers_chosen_adv": 0.8444444444444444,
+   "chosen_reward": -2.6858141512403058,
+   "rejected_reward": 3.710602825333675
+  }
+ },
+ "val_final": {
+  "all": {
+   "n": 225,
+   "loss": 0.16274356637754062,
+   "secpo_margin": 795.0420113372803,
+   "secpo_acc": 0.9866666666666667,
+   "policy_logratio_adv": 964.3532084825304,
+   "policy_prefers_chosen_adv": 0.9866666666666667,
+   "chosen_reward": -3.925109883633753,
+   "rejected_reward": -83.42931216451856
+  },
+  "strict": {
+   "n": 225,
+   "loss": 0.16274356637754062,
+   "secpo_margin": 795.0420113372803,
+   "secpo_acc": 0.9866666666666667,
+   "policy_logratio_adv": 964.3532084825304,
+   "policy_prefers_chosen_adv": 0.9866666666666667,
+   "chosen_reward": -3.925109883633753,
+   "rejected_reward": -83.42931216451856
+  }
+ },
+ "trainable_params": 100663312,
+ "trainable_pct": 1.434,
+ "se_alpha_final": [
+  0.099687,
+  0.099974,
+  0.100292,
+  0.100521,
+  0.100417,
+  0.100928,
+  0.101634,
+  0.101872,
+  0.101491,
+  0.101187,
+  0.100854,
+  0.100444,
+  0.100373,
+  0.101406,
+  0.102358,
+  0.101188
+ ],
+ "security_expert_sha256": "ed9b3c196083e69a23282aa5b8b0e59fb7d5152ab2f978ab050407d694d77367",
+ "adapter_dir": "/workspace/out/secpo_se_v1/security_expert",
+ "config": "config.json"
+}

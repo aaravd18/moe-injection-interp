@@ -1,0 +1,12 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:05, 31.81it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:02, 67.26it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:02, 68.33it/s]Loading weights:  21%|██        | 37/179 [00:00<00:01, 72.67it/s]Loading weights:  27%|██▋       | 48/179 [00:00<00:01, 71.64it/s]Loading weights:  33%|███▎      | 59/179 [00:00<00:01, 73.90it/s]Loading weights:  39%|███▉      | 70/179 [00:01<00:01, 69.53it/s]Loading weights:  45%|████▌     | 81/179 [00:01<00:01, 66.48it/s]Loading weights:  51%|█████▏    | 92/179 [00:01<00:01, 64.08it/s]Loading weights:  58%|█████▊    | 103/179 [00:01<00:01, 66.52it/s]Loading weights:  64%|██████▎   | 114/179 [00:01<00:00, 65.36it/s]Loading weights:  70%|██████▉   | 125/179 [00:01<00:00, 64.49it/s]Loading weights:  76%|███████▌  | 136/179 [00:02<00:00, 62.05it/s]Loading weights:  82%|████████▏ | 147/179 [00:02<00:00, 63.90it/s]Loading weights:  88%|████████▊ | 158/179 [00:02<00:00, 63.77it/s]Loading weights:  94%|█████████▍| 169/179 [00:02<00:00, 62.65it/s]Loading weights: 100%|██████████| 179/179 [00:02<00:00, 68.81it/s]
+base/clean: 8/8  (1s)
+base/injection: 8/8  (1s)
+base/clean repeat: 4/4  (0s)
+base/injection repeat: 4/4  (0s)
+adapter-off/clean: 4/4  (0s)
+adapter-off/injection: 4/4  (0s)
+secpo/clean: 8/8  (3s)
+secpo/injection: 8/8  (3s)
+secpo/clean repeat: 4/4  (2s)
+secpo/injection repeat: 4/4  (2s)
+{"capture_seconds": 14.7, "peak_gpu_mem_gb": 27.79, "n_tokens": {"clean": 711, "injection": 770}, "checks_all_ok": true}

@@ -1,0 +1,14 @@
+{
+  "base": {
+    "n_token_layers": 243728,
+    "topk_sets_differ": 10,
+    "max_abs_logit_diff": 0.13850092887878418,
+    "frac_topk_sets_differ": 4.102934418696252e-05
+  },
+  "secpo": {
+    "n_token_layers": 243728,
+    "topk_sets_differ": 0,
+    "max_abs_logit_diff": 1.5854835510253906e-05,
+    "frac_topk_sets_differ": 0.0
+  }
+}

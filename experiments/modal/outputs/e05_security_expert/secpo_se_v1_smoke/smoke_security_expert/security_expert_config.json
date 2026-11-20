@@ -1,0 +1,8 @@
+{
+ "n_layers": 16,
+ "hidden_size": 2048,
+ "intermediate_size": 1024,
+ "hidden_act": "silu",
+ "dtype": "float32",
+ "formula": "h_new(x) = h_MoE(x) + alpha_l * W_down (act(W_gate x) * (W_up x)), x = MoE block input"
+}

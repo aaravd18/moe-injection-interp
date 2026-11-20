@@ -1,0 +1,64 @@
+{
+  "step": "e04_routing_capture",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "resolved_commit_hash": null,
+  "dtype": "float32",
+  "device": "cuda",
+  "tiny_random": false,
+  "adapter": "/workspace/secpo_v2/adapter",
+  "adapter_sha256": "eb1472ff576e3508119a086de01cfb1161888e9d2ce6c28734c45f5f5bf6c4f0",
+  "random_adapter": false,
+  "gpu": "NVIDIA L40S",
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "peft": "0.21.3",
+  "attn_implementation": "sdpa",
+  "experts_implementation": "grouped_mm",
+  "float32_matmul_precision": "highest",
+  "data": "/workspace/repo/data/alpacafarm_secalign_208.jsonl",
+  "data_sha256": "3ceca3c350bb4bcb244512e9f1ff8a26fe911aa3d282e003844b7294ce3aab28",
+  "n_records": 208,
+  "conditions": [
+    "clean",
+    "injection"
+  ],
+  "models": [
+    "base",
+    "secpo"
+  ],
+  "batch_size": 1,
+  "padding": null,
+  "use_cache": false,
+  "n_tokens": {
+    "clean": 16706,
+    "injection": 18282
+  },
+  "architecture": {
+    "model_type": "olmoe",
+    "num_layers": 16,
+    "num_experts": 64,
+    "top_k": 8,
+    "norm_topk_prob": false,
+    "hidden_size": 2048,
+    "num_attention_heads": 16,
+    "num_key_value_heads": 16,
+    "head_dim": 128,
+    "layer_types": null,
+    "sliding_window": null,
+    "router_module_class": "OlmoeTopKRouter",
+    "moe_block_class": "OlmoeSparseMoeBlock",
+    "attention_class": "OlmoeAttention",
+    "decoder_layer_class": "OlmoeDecoderLayer"
+  },
+  "load_seconds": 3.8,
+  "capture_seconds": 213.8,
+  "seconds_per_condition": {
+    "base/clean": 18.1,
+    "base/injection": 17.0,
+    "secpo/clean": 83.8,
+    "secpo/injection": 83.7
+  },
+  "peak_gpu_mem_gb": 27.86,
+  "checks_all_ok": true
+}

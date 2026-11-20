@@ -1,0 +1,245 @@
+{
+ "0": {
+  "all/loss": {
+   "e05": 6.52876,
+   "rerun": 6.52876,
+   "abs_diff": 0.0
+  },
+  "all/secpo_acc": {
+   "e05": 0.04,
+   "rerun": 0.04,
+   "abs_diff": 0.0
+  },
+  "all/chosen_reward": {
+   "e05": -2.68581,
+   "rerun": -2.68581,
+   "abs_diff": 0.0
+  },
+  "all/rejected_reward": {
+   "e05": 3.7106,
+   "rerun": 3.7106,
+   "abs_diff": 0.0
+  },
+  "se_ratio_mean": {
+   "e05": 0.0,
+   "rerun": 0.0,
+   "abs_diff": 0.0
+  }
+ },
+ "10": {
+  "all/loss": {
+   "e05": 1.20728,
+   "rerun": 1.2079,
+   "abs_diff": 0.00062
+  },
+  "all/secpo_acc": {
+   "e05": 0.77333,
+   "rerun": 0.76889,
+   "abs_diff": 0.00444
+  },
+  "all/chosen_reward": {
+   "e05": -3.88016,
+   "rerun": -3.86951,
+   "abs_diff": 0.01065
+  },
+  "all/rejected_reward": {
+   "e05": -15.18225,
+   "rerun": -15.15688,
+   "abs_diff": 0.02537
+  },
+  "se_ratio_mean": {
+   "e05": 0.022195,
+   "rerun": 0.022185,
+   "abs_diff": 1e-05
+  }
+ },
+ "20": {
+  "all/loss": {
+   "e05": 0.33983,
+   "rerun": 0.31749,
+   "abs_diff": 0.02234
+  },
+  "all/secpo_acc": {
+   "e05": 0.94222,
+   "rerun": 0.94222,
+   "abs_diff": 0.0
+  },
+  "all/chosen_reward": {
+   "e05": -6.90392,
+   "rerun": -6.63597,
+   "abs_diff": 0.26795
+  },
+  "all/rejected_reward": {
+   "e05": -43.27929,
+   "rerun": -42.19521,
+   "abs_diff": 1.08408
+  },
+  "se_ratio_mean": {
+   "e05": 0.039705,
+   "rerun": 0.039436,
+   "abs_diff": 0.00027
+  }
+ },
+ "30": {
+  "all/loss": {
+   "e05": 0.41965,
+   "rerun": 0.3558,
+   "abs_diff": 0.06385
+  },
+  "all/secpo_acc": {
+   "e05": 0.95556,
+   "rerun": 0.95111,
+   "abs_diff": 0.00445
+  },
+  "all/chosen_reward": {
+   "e05": -6.26815,
+   "rerun": -4.76943,
+   "abs_diff": 1.49872
+  },
+  "all/rejected_reward": {
+   "e05": -68.23089,
+   "rerun": -53.96415,
+   "abs_diff": 14.26674
+  },
+  "se_ratio_mean": {
+   "e05": 0.051834,
+   "rerun": 0.046573,
+   "abs_diff": 0.00526
+  }
+ },
+ "40": {
+  "all/loss": {
+   "e05": 0.15332,
+   "rerun": 0.15649,
+   "abs_diff": 0.00317
+  },
+  "all/secpo_acc": {
+   "e05": 0.96889,
+   "rerun": 0.96444,
+   "abs_diff": 0.00445
+  },
+  "all/chosen_reward": {
+   "e05": -3.00424,
+   "rerun": -2.753,
+   "abs_diff": 0.25124
+  },
+  "all/rejected_reward": {
+   "e05": -35.17591,
+   "rerun": -36.84127,
+   "abs_diff": 1.66536
+  },
+  "se_ratio_mean": {
+   "e05": 0.04718,
+   "rerun": 0.045565,
+   "abs_diff": 0.00161
+  }
+ },
+ "50": {
+  "all/loss": {
+   "e05": 0.12491,
+   "rerun": 0.10488,
+   "abs_diff": 0.02003
+  },
+  "all/secpo_acc": {
+   "e05": 0.97778,
+   "rerun": 0.98222,
+   "abs_diff": 0.00444
+  },
+  "all/chosen_reward": {
+   "e05": -2.35183,
+   "rerun": -2.79644,
+   "abs_diff": 0.44461
+  },
+  "all/rejected_reward": {
+   "e05": -44.02636,
+   "rerun": -50.92708,
+   "abs_diff": 6.90072
+  },
+  "se_ratio_mean": {
+   "e05": 0.054747,
+   "rerun": 0.054639,
+   "abs_diff": 0.00011
+  }
+ },
+ "60": {
+  "all/loss": {
+   "e05": 0.17257,
+   "rerun": 0.07405,
+   "abs_diff": 0.09852
+  },
+  "all/secpo_acc": {
+   "e05": 0.98222,
+   "rerun": 0.98667,
+   "abs_diff": 0.00445
+  },
+  "all/chosen_reward": {
+   "e05": -3.49699,
+   "rerun": -3.38,
+   "abs_diff": 0.11699
+  },
+  "all/rejected_reward": {
+   "e05": -73.63104,
+   "rerun": -66.09516,
+   "abs_diff": 7.53588
+  },
+  "se_ratio_mean": {
+   "e05": 0.069444,
+   "rerun": 0.062943,
+   "abs_diff": 0.0065
+  }
+ },
+ "70": {
+  "all/loss": {
+   "e05": 0.16882,
+   "rerun": 0.0711,
+   "abs_diff": 0.09772
+  },
+  "all/secpo_acc": {
+   "e05": 0.98667,
+   "rerun": 0.98667,
+   "abs_diff": 0.0
+  },
+  "all/chosen_reward": {
+   "e05": -4.05545,
+   "rerun": -4.14815,
+   "abs_diff": 0.0927
+  },
+  "all/rejected_reward": {
+   "e05": -84.90735,
+   "rerun": -76.69006,
+   "abs_diff": 8.21729
+  },
+  "se_ratio_mean": {
+   "e05": 0.075401,
+   "rerun": 0.068368,
+   "abs_diff": 0.00703
+  }
+ },
+ "80": {
+  "all/loss": {
+   "e05": 0.16274,
+   "rerun": 0.05793,
+   "abs_diff": 0.10481
+  },
+  "all/secpo_acc": {
+   "e05": 0.98667,
+   "rerun": 0.99111,
+   "abs_diff": 0.00444
+  },
+  "all/chosen_reward": {
+   "e05": -3.92511,
+   "rerun": -3.89719,
+   "abs_diff": 0.02792
+  },
+  "all/rejected_reward": {
+   "e05": -83.42931,
+   "rerun": -78.56874,
+   "abs_diff": 4.86057
+  },
+  "se_ratio_mean": {
+   "e05": 0.0758,
+   "rerun": 0.06924,
+   "abs_diff": 0.00656
+  }
+ }
+}

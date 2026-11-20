@@ -1,0 +1,39 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:15, 11.44it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:07, 23.37it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:05, 26.50it/s]Loading weights:  21%|██        | 37/179 [00:01<00:05, 28.20it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:04, 29.48it/s]Loading weights:  33%|███▎      | 59/179 [00:02<00:03, 30.17it/s]Loading weights:  39%|███▉      | 70/179 [00:02<00:03, 30.33it/s]Loading weights:  45%|████▌     | 81/179 [00:02<00:03, 30.12it/s]Loading weights:  51%|█████▏    | 92/179 [00:03<00:02, 30.05it/s]Loading weights:  58%|█████▊    | 103/179 [00:03<00:02, 29.99it/s]Loading weights:  64%|██████▎   | 114/179 [00:03<00:02, 29.49it/s]Loading weights:  70%|██████▉   | 125/179 [00:04<00:01, 29.62it/s]Loading weights:  76%|███████▌  | 136/179 [00:04<00:01, 29.68it/s]Loading weights:  82%|████████▏ | 147/179 [00:05<00:01, 29.66it/s]Loading weights:  88%|████████▊ | 158/179 [00:05<00:00, 29.66it/s]Loading weights:  94%|█████████▍| 169/179 [00:05<00:00, 29.38it/s]Loading weights: 100%|██████████| 179/179 [00:05<00:00, 30.63it/s]
+clean: 32/40  (82s)
+clean: 40/40  (89s)
+injection: 32/40  (173s)
+injection: 40/40  (191s)
+{
+ "step": "e03_generate",
+ "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+ "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+ "resolved_commit_hash": null,
+ "dtype": "float32",
+ "device": "cuda",
+ "tiny_random": false,
+ "adapter": null,
+ "security_expert": null,
+ "adapter_sha256": null,
+ "split": null,
+ "split_file": null,
+ "gpu": "NVIDIA A100-SXM4-80GB",
+ "torch": "2.14.1+cu130",
+ "transformers": "5.22.1",
+ "data": "data/secpo_dev40.jsonl",
+ "data_sha256": "5ce5ff6f39eef80913cda44c4f63c27be1d3dcfa4e5098b5c627c8adace7c430",
+ "subset": "all",
+ "shard": null,
+ "n_records": 40,
+ "n_generations": 80,
+ "conditions": [
+  "clean",
+  "injection"
+ ],
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "batch_size": 32,
+ "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: user = metadata.seed_task.strip(), no system; add_generation_prompt",
+ "load_seconds": 9.1,
+ "generate_seconds": 190.7,
+ "finished_with_eos": 78
+}

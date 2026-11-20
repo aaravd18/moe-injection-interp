@@ -1,0 +1,50 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:10, 16.78it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:05, 30.65it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:04, 33.62it/s]Loading weights:  21%|██        | 37/179 [00:01<00:04, 34.04it/s]Loading weights:  27%|██▋       | 48/179 [00:01<00:03, 34.49it/s]Loading weights:  33%|███▎      | 59/179 [00:01<00:03, 34.43it/s]Loading weights:  39%|███▉      | 70/179 [00:02<00:03, 33.90it/s]Loading weights:  45%|████▌     | 81/179 [00:02<00:02, 33.14it/s]Loading weights:  51%|█████▏    | 92/179 [00:02<00:02, 32.78it/s]Loading weights:  58%|█████▊    | 103/179 [00:03<00:02, 32.35it/s]Loading weights:  64%|██████▎   | 114/179 [00:03<00:02, 32.21it/s]Loading weights:  70%|██████▉   | 125/179 [00:03<00:01, 32.86it/s]Loading weights:  76%|███████▌  | 136/179 [00:04<00:01, 32.57it/s]Loading weights:  82%|████████▏ | 147/179 [00:04<00:00, 32.37it/s]Loading weights:  88%|████████▊ | 158/179 [00:04<00:00, 32.28it/s]Loading weights:  94%|█████████▍| 169/179 [00:05<00:00, 32.01it/s]Loading weights: 100%|██████████| 179/179 [00:05<00:00, 34.36it/s]
+clean: 32/208  (86s)
+clean: 64/208  (174s)
+clean: 96/208  (259s)
+clean: 128/208  (343s)
+clean: 160/208  (429s)
+clean: 192/208  (514s)
+clean: 208/208  (558s)
+injection: 32/208  (641s)
+injection: 64/208  (692s)
+injection: 96/208  (781s)
+injection: 128/208  (865s)
+injection: 160/208  (951s)
+injection: 192/208  (1018s)
+injection: 208/208  (1063s)
+{
+ "step": "e03_generate",
+ "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+ "requested_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+ "resolved_commit_hash": null,
+ "dtype": "float32",
+ "device": "cuda",
+ "tiny_random": false,
+ "adapter": null,
+ "security_expert": "/workspace/out/secpo_se_v1/security_expert",
+ "adapter_sha256": "ed9b3c196083e69a23282aa5b8b0e59fb7d5152ab2f978ab050407d694d77367",
+ "split": null,
+ "split_file": null,
+ "gpu": "NVIDIA A100-SXM4-80GB",
+ "torch": "2.14.1+cu130",
+ "transformers": "5.22.1",
+ "data": "data/alpacafarm_secalign_208.jsonl",
+ "data_sha256": "3ceca3c350bb4bcb244512e9f1ff8a26fe911aa3d282e003844b7294ce3aab28",
+ "subset": "all",
+ "shard": null,
+ "n_records": 208,
+ "n_generations": 416,
+ "conditions": [
+  "clean",
+  "injection"
+ ],
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "batch_size": 32,
+ "chat_template": "OLMoE tokenizer template; clean/injection: system = instruction, user = data; seed_task: user = metadata.seed_task.strip(), no system; add_generation_prompt",
+ "load_seconds": 8.0,
+ "generate_seconds": 1062.9,
+ "finished_with_eos": 402
+}
+GEN_DONE

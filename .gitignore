@@ -25,3 +25,5 @@ experiments/modal/outputs/**/adapter*/
 *.pth
 *.ckpt
 *.gguf
+# E04 routing captures (~80 MB per .npz; regenerate with e04_routing_capture.py)
+experiments/modal/outputs/e04_secpo_routing/**/*.npz

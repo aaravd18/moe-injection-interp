@@ -189,6 +189,8 @@ def main() -> None:
     ap.add_argument("--requests-per-minute", type=int, default=14, help="client-side cap (free tier: 15)")
     ap.add_argument("--retry-errors", action="store_true", help="drop parse_error rows from the output and redo them")
     ap.add_argument("--only", default="", help="comma-separated id:condition list (calibration subsets)")
+    ap.add_argument("--conditions", default="", help="comma-separated: judge only rows of these conditions")
+    ap.add_argument("--gen-file", default="generations.jsonl", help="generations file name in gen-dir")
     ap.add_argument("--limit", type=int, default=0, help="judge at most N pending rows")
     ap.add_argument("--out-name", default="judgments_flash.jsonl", help="file name in gen-dir, or an absolute path")
     args = ap.parse_args()
@@ -197,7 +199,7 @@ def main() -> None:
         raise SystemExit("set GEMINI_API_KEY")
 
     gen_dir = Path(args.gen_dir)
-    gens = [json.loads(l) for l in (gen_dir / "generations.jsonl").open()]
+    gens = [json.loads(l) for l in (gen_dir / args.gen_file).open()]
     records = {r["id"]: r for r in map(json.loads, Path(args.data).open())}
     jobs = build_jobs(records, gens)
     out_path = gen_dir / args.out_name
@@ -209,6 +211,8 @@ def main() -> None:
     if args.only:
         want = {tuple(x.split(":")) for x in args.only.split(",") if x}
         todo = [j for j in todo if (j["id"], j["condition"]) in want]
+    if args.conditions:
+        todo = [j for j in todo if j["condition"] in args.conditions.split(",")]
     if args.limit:
         todo = todo[: args.limit]
     lock, t0 = threading.Lock(), time.time()

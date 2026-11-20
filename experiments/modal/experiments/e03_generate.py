@@ -18,6 +18,9 @@ Usage:
     # restricted to one side of the grouped split, optionally with a SecPO LoRA adapter (applied unmerged, i.e. the
     # same forward pass as training):
     python experiments/modal/experiments/e03_generate.py --subset all --split val --adapter RUN/adapter --out OUT_DIR
+    # E05: always-active security experts instead of a LoRA adapter (fp32-trained -> evaluate with --dtype float32):
+    python experiments/modal/experiments/e03_generate.py --data data/alpacafarm_secalign_208.jsonl --subset all \
+        --dtype float32 --security-expert RUN/security_expert --out OUT_DIR
     # SecPO's rejected side, y_l = f_undef(z'): the seed task alone (metadata.seed_task, the source rejected_input,
     # whitespace-stripped) as one user message, no system message (paper Algorithm 1, line 13):
     python experiments/modal/experiments/e03_generate.py --subset all --conditions seed_task --out OUT_DIR
@@ -69,6 +72,8 @@ def main() -> None:
                     "trained in float32: PEFT adds the expert LoRA delta into the fused weight in the model dtype")
     ap.add_argument("--tiny", action="store_true", help="tiny random OLMoE on CPU (pipeline check; output is noise)")
     ap.add_argument("--adapter", default=None, help="PEFT LoRA adapter dir (e.g. from e03_secpo_train.py); unmerged")
+    ap.add_argument("--security-expert", default=None,
+                    help="dir from e03_secpo_train.py --method security_expert (moe_interp/security_expert.py)")
     ap.add_argument("--split", choices=["train", "val"], default=None, help="keep only this side of --split-file")
     ap.add_argument("--split-file", default=str(REPO / "experiments" / "modal" / "artifacts" / "splits" /
                                                 "secpo_olmoe_v1_grouped_v1.json"))
@@ -107,6 +112,14 @@ def main() -> None:
     lm = load_model(cfg.model)
     load_s = time.time() - t0
     adapter_sha = None
+    if args.adapter and args.security_expert:
+        raise SystemExit("--adapter and --security-expert are mutually exclusive")
+    if args.security_expert:
+        from moe_interp.security_expert import WEIGHTS, load_security_experts
+
+        load_security_experts(lm.model, lm.layout, args.security_expert)
+        lm.model.eval()
+        adapter_sha = hashlib.sha256((Path(args.security_expert) / WEIGHTS).read_bytes()).hexdigest()
     if args.adapter:
         from peft import PeftModel
 
@@ -118,6 +131,7 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     recs, t1 = [], time.time()
+    partial = (out / "generations.partial.jsonl").open("w")  # streamed per batch (judge can start early)
     for cond in conditions:
         rendered = [render_prompt(tok, messages(r, cond), True, None, {}) for r in rows]
         for b in range(0, len(rows), args.batch_size):
@@ -129,14 +143,17 @@ def main() -> None:
                              "n_prompt_tokens": len(x.input_ids), "response": text, "n_response_tokens": len(ids),
                              "finish_reason": "stop" if ids and ids[-1] in eos else "length",
                              "repetition_3gram": repetition(text)})
+                partial.write(json.dumps(recs[-1], ensure_ascii=False) + "\n")
+            partial.flush()
             print(f"{cond}: {min(b + args.batch_size, len(rows))}/{len(rows)}  ({time.time() - t1:.0f}s)", flush=True)
+    partial.close()
     with (out / "generations.jsonl").open("w") as f:
         for r in recs:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     info = {
         "step": "e03_generate", "model": lm.info["model_id"], "requested_revision": lm.info["requested_revision"],
         "resolved_commit_hash": lm.info["resolved_commit_hash"], "dtype": lm.info["dtype"], "device": lm.info["device"],
-        "tiny_random": args.tiny, "adapter": args.adapter, "adapter_sha256": adapter_sha,
+        "tiny_random": args.tiny, "adapter": args.adapter, "security_expert": args.security_expert, "adapter_sha256": adapter_sha,
         "split": args.split, "split_file": args.split_file if args.split else None, "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "torch": torch.__version__, "transformers": transformers.__version__,
         "data": args.data, "data_sha256": hashlib.sha256(raw).hexdigest(), "subset": args.subset, "shard": args.shard,

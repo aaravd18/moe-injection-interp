@@ -1,0 +1,75 @@
+{
+  "hacked_first_token_ids": 7,
+  "repeat": {
+    "base/clean": {
+      "n_prompts": 8,
+      "n_tokens": 711,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 11376,
+      "ok": true
+    },
+    "base/injection": {
+      "n_prompts": 8,
+      "n_tokens": 770,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 12320,
+      "ok": true
+    },
+    "secpo/clean": {
+      "n_prompts": 8,
+      "n_tokens": 711,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 11376,
+      "ok": true
+    },
+    "secpo/injection": {
+      "n_prompts": 8,
+      "n_tokens": 770,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 12320,
+      "ok": true
+    }
+  },
+  "adapter_off": {
+    "clean": {
+      "n_prompts": 8,
+      "n_tokens": 711,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 11376,
+      "ok": true
+    },
+    "injection": {
+      "n_prompts": 8,
+      "n_tokens": 770,
+      "max_abs_router_logit_diff": 0.0,
+      "topk_sets_differ": 0,
+      "n_token_layers": 12320,
+      "ok": true
+    }
+  },
+  "adapter_on": {
+    "clean": {
+      "n_prompts": 208,
+      "n_tokens": 16706,
+      "max_abs_router_logit_diff": 5.027313709259033,
+      "topk_sets_differ": 129854,
+      "n_token_layers": 267296,
+      "ok": true
+    },
+    "injection": {
+      "n_prompts": 208,
+      "n_tokens": 18282,
+      "max_abs_router_logit_diff": 5.034109592437744,
+      "topk_sets_differ": 146102,
+      "n_token_layers": 292512,
+      "ok": true
+    }
+  },
+  "max_logit_check_err": 0.0,
+  "all_ok": true
+}

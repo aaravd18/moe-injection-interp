@@ -1,0 +1,44 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:05, 34.81it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:02, 60.10it/s]Loading weights:  15%|█▍        | 26/179 [00:00<00:02, 66.69it/s]Loading weights:  21%|██        | 37/179 [00:00<00:02, 67.98it/s]Loading weights:  27%|██▋       | 48/179 [00:00<00:01, 73.73it/s]Loading weights:  33%|███▎      | 59/179 [00:00<00:01, 70.54it/s]Loading weights:  39%|███▉      | 70/179 [00:00<00:01, 74.84it/s]Loading weights:  45%|████▌     | 81/179 [00:01<00:01, 70.69it/s]Loading weights:  51%|█████▏    | 92/179 [00:01<00:01, 73.04it/s]Loading weights:  58%|█████▊    | 103/179 [00:01<00:01, 71.34it/s]Loading weights:  64%|██████▎   | 114/179 [00:01<00:00, 72.36it/s]Loading weights:  70%|██████▉   | 125/179 [00:01<00:00, 69.19it/s]Loading weights:  76%|███████▌  | 136/179 [00:01<00:00, 67.33it/s]Loading weights:  82%|████████▏ | 147/179 [00:02<00:00, 65.16it/s]Loading weights:  88%|████████▊ | 158/179 [00:02<00:00, 67.68it/s]Loading weights:  94%|█████████▍| 169/179 [00:02<00:00, 67.42it/s]Loading weights: 100%|██████████| 179/179 [00:02<00:00, 72.38it/s]
+base/clean: 25/208  (3s)
+base/clean: 50/208  (5s)
+base/clean: 75/208  (7s)
+base/clean: 100/208  (9s)
+base/clean: 125/208  (11s)
+base/clean: 150/208  (13s)
+base/clean: 175/208  (15s)
+base/clean: 200/208  (17s)
+base/clean: 208/208  (18s)
+base/injection: 25/208  (2s)
+base/injection: 50/208  (4s)
+base/injection: 75/208  (6s)
+base/injection: 100/208  (8s)
+base/injection: 125/208  (10s)
+base/injection: 150/208  (12s)
+base/injection: 175/208  (14s)
+base/injection: 200/208  (16s)
+base/injection: 208/208  (17s)
+base/clean repeat: 8/8  (1s)
+base/injection repeat: 8/8  (1s)
+adapter-off/clean: 8/8  (1s)
+adapter-off/injection: 8/8  (1s)
+secpo/clean: 25/208  (10s)
+secpo/clean: 50/208  (20s)
+secpo/clean: 75/208  (30s)
+secpo/clean: 100/208  (40s)
+secpo/clean: 125/208  (50s)
+secpo/clean: 150/208  (60s)
+secpo/clean: 175/208  (71s)
+secpo/clean: 200/208  (81s)
+secpo/clean: 208/208  (84s)
+secpo/injection: 25/208  (10s)
+secpo/injection: 50/208  (20s)
+secpo/injection: 75/208  (30s)
+secpo/injection: 100/208  (41s)
+secpo/injection: 125/208  (50s)
+secpo/injection: 150/208  (61s)
+secpo/injection: 175/208  (71s)
+secpo/injection: 200/208  (80s)
+secpo/injection: 208/208  (84s)
+secpo/clean repeat: 8/8  (3s)
+secpo/injection repeat: 8/8  (3s)
+{"capture_seconds": 213.8, "peak_gpu_mem_gb": 27.86, "n_tokens": {"clean": 16706, "injection": 18282}, "checks_all_ok": true}
