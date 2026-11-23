@@ -1,0 +1,145 @@
+verifying base model
+=== 21:11:02 base, cache 26 GB
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:24,  7.05it/s]Loading weights:   8%|▊         | 15/179 [00:01<00:10, 15.01it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:07, 19.68it/s]Loading weights:  21%|██        | 37/179 [00:02<00:06, 20.53it/s]Loading weights:  27%|██▋       | 48/179 [00:02<00:06, 19.85it/s]Loading weights:  33%|███▎      | 59/179 [00:03<00:05, 20.45it/s]Loading weights:  39%|███▉      | 70/179 [00:03<00:05, 19.91it/s]Loading weights:  45%|████▌     | 81/179 [00:04<00:04, 21.80it/s]Loading weights:  51%|█████▏    | 92/179 [00:04<00:03, 23.20it/s]Loading weights:  58%|█████▊    | 103/179 [00:04<00:03, 22.79it/s]Loading weights:  64%|██████▎   | 114/179 [00:05<00:02, 22.61it/s]Loading weights:  70%|██████▉   | 125/179 [00:05<00:02, 22.46it/s]Loading weights:  76%|███████▌  | 136/179 [00:06<00:01, 22.30it/s]Loading weights:  82%|████████▏ | 147/179 [00:06<00:01, 23.41it/s]Loading weights:  88%|████████▊ | 158/179 [00:07<00:00, 23.29it/s]Loading weights:  94%|█████████▍| 169/179 [00:07<00:00, 24.07it/s]Loading weights: 100%|██████████| 179/179 [00:07<00:00, 22.70it/s]
+base: 32 prompts in 124 slots
+  base: step 100 active 18 queued 0 533 tok/s peak 37.1 GB
+  base: step 200 active 15 queued 0 519 tok/s peak 37.1 GB
+  base: step 300 active 10 queued 0 484 tok/s peak 37.1 GB
+  base: step 400 active 6 queued 0 451 tok/s peak 37.1 GB
+  base: step 500 active 5 queued 0 420 tok/s peak 37.1 GB
+base controls: {"n": 32, "prefix16": 0.65625, "exact": 0.3125, "required": 0.65, "passed": true, "stats": [{"steps": 511, "tokens": 6822, "prompts": 32, "slots": 124, "seconds": 16.3}]}
+base: 1456 to generate, 0 already done
+base: 1417 prompts in 112 slots
+  base: step 100 active 112 queued 1264 1222 tok/s peak 57.2 GB
+  base: step 200 active 111 queued 1246 1366 tok/s peak 57.2 GB
+  base: step 300 active 111 queued 1229 1413 tok/s peak 57.2 GB
+  base: step 400 active 112 queued 1206 1410 tok/s peak 57.2 GB
+  base: step 500 active 111 queued 1178 1402 tok/s peak 57.2 GB
+  base: step 600 active 112 queued 1095 1351 tok/s peak 57.3 GB
+  base: step 700 active 111 queued 1048 1339 tok/s peak 57.3 GB
+  base: step 800 active 110 queued 990 1330 tok/s peak 57.3 GB
+  base: step 900 active 110 queued 920 1315 tok/s peak 57.3 GB
+  base: step 1000 active 112 queued 836 1299 tok/s peak 57.3 GB
+  base: step 1100 active 111 queued 744 1281 tok/s peak 57.3 GB
+  base: step 1200 active 112 queued 630 1268 tok/s peak 57.3 GB
+  base: step 1300 active 109 queued 498 1248 tok/s peak 57.3 GB
+  base: step 1400 active 106 queued 313 1225 tok/s peak 57.3 GB
+  base: step 1500 active 71 queued 0 1196 tok/s peak 57.3 GB
+  base: step 1600 active 33 queued 0 1189 tok/s peak 57.3 GB
+  base: step 1700 active 23 queued 0 1177 tok/s peak 57.3 GB
+  base: step 1800 active 13 queued 0 1164 tok/s peak 57.3 GB
+  base: step 1900 active 7 queued 0 1150 tok/s peak 57.3 GB
+base: 39 prompts in 37 slots
+  base: step 100 active 14 queued 0 332 tok/s peak 57.3 GB
+  base: step 200 active 11 queued 0 341 tok/s peak 57.3 GB
+  base: step 300 active 5 queued 0 325 tok/s peak 57.3 GB
+  base: step 400 active 5 queued 0 306 tok/s peak 57.3 GB
+  base: step 500 active 5 queued 0 292 tok/s peak 57.3 GB
+base: DONE 1456 generations in 175.5 s
+=== 21:14:29 lora, cache 26 GB
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:23,  7.41it/s]Loading weights:   8%|▊         | 15/179 [00:01<00:11, 14.28it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:09, 16.06it/s]Loading weights:  21%|██        | 37/179 [00:02<00:08, 16.22it/s]Loading weights:  27%|██▋       | 48/179 [00:02<00:07, 17.96it/s]Loading weights:  33%|███▎      | 59/179 [00:03<00:06, 19.07it/s]Loading weights:  39%|███▉      | 70/179 [00:03<00:05, 21.09it/s]Loading weights:  45%|████▌     | 81/179 [00:04<00:04, 21.58it/s]Loading weights:  51%|█████▏    | 92/179 [00:04<00:03, 21.80it/s]Loading weights:  58%|█████▊    | 103/179 [00:05<00:03, 23.10it/s]Loading weights:  64%|██████▎   | 114/179 [00:05<00:02, 24.15it/s]Loading weights:  70%|██████▉   | 125/179 [00:06<00:02, 23.92it/s]Loading weights:  76%|███████▌  | 136/179 [00:06<00:01, 24.37it/s]Loading weights:  82%|████████▏ | 147/179 [00:07<00:01, 23.80it/s]Loading weights:  88%|████████▊ | 158/179 [00:07<00:00, 24.62it/s]Loading weights:  94%|█████████▍| 169/179 [00:07<00:00, 23.83it/s]Loading weights: 100%|██████████| 179/179 [00:07<00:00, 22.50it/s]
+lora: 32 prompts in 124 slots
+  lora: step 100 active 16 queued 0 492 tok/s peak 37.6 GB
+  lora: step 200 active 4 queued 0 420 tok/s peak 37.6 GB
+  lora: step 300 active 1 queued 0 350 tok/s peak 37.6 GB
+lora controls: {"n": 32, "prefix16": 1.0, "exact": 1.0, "required": 0.8, "passed": true, "stats": [{"steps": 352, "tokens": 3563, "prompts": 32, "slots": 124, "seconds": 11.1}]}
+lora: 1456 to generate, 0 already done
+lora: 1417 prompts in 112 slots
+  lora: step 100 active 112 queued 1294 1242 tok/s peak 57.8 GB
+  lora: step 200 active 112 queued 1259 1316 tok/s peak 57.8 GB
+  lora: step 300 active 111 queued 1219 1309 tok/s peak 57.8 GB
+  lora: step 400 active 111 queued 1169 1288 tok/s peak 57.8 GB
+  lora: step 500 active 110 queued 1108 1262 tok/s peak 57.8 GB
+  lora: step 600 active 109 queued 1027 1243 tok/s peak 57.8 GB
+  lora: step 700 active 111 queued 940 1231 tok/s peak 57.8 GB
+  lora: step 800 active 112 queued 850 1212 tok/s peak 57.8 GB
+  lora: step 900 active 112 queued 753 1196 tok/s peak 57.8 GB
+  lora: step 1000 active 112 queued 628 1176 tok/s peak 57.8 GB
+  lora: step 1100 active 111 queued 506 1164 tok/s peak 57.8 GB
+  lora: step 1200 active 110 queued 360 1149 tok/s peak 57.8 GB
+  lora: step 1300 active 108 queued 108 1126 tok/s peak 57.8 GB
+  lora: step 1400 active 19 queued 0 1109 tok/s peak 57.8 GB
+  lora: step 1500 active 8 queued 0 1092 tok/s peak 57.8 GB
+  lora: step 1600 active 4 queued 0 1076 tok/s peak 57.8 GB
+  lora: step 1700 active 2 queued 0 1061 tok/s peak 57.8 GB
+lora: 39 prompts in 37 slots
+  lora: step 100 active 25 queued 0 462 tok/s peak 57.8 GB
+  lora: step 200 active 9 queued 0 432 tok/s peak 57.8 GB
+  lora: step 300 active 5 queued 0 397 tok/s peak 57.8 GB
+  lora: step 400 active 3 queued 0 366 tok/s peak 57.8 GB
+  lora: step 500 active 3 queued 0 339 tok/s peak 57.8 GB
+lora: DONE 1456 generations in 166.1 s
+=== 21:17:44 e05, cache 26 GB
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:22,  7.63it/s]Loading weights:   8%|▊         | 15/179 [00:01<00:10, 15.98it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:08, 18.87it/s]Loading weights:  21%|██        | 37/179 [00:01<00:06, 20.33it/s]Loading weights:  27%|██▋       | 48/179 [00:02<00:05, 22.31it/s]Loading weights:  33%|███▎      | 59/179 [00:02<00:05, 23.74it/s]Loading weights:  39%|███▉      | 70/179 [00:03<00:04, 23.50it/s]Loading weights:  45%|████▌     | 81/179 [00:03<00:04, 24.36it/s]Loading weights:  51%|█████▏    | 92/179 [00:04<00:03, 23.68it/s]Loading weights:  58%|█████▊    | 103/179 [00:04<00:03, 22.85it/s]Loading weights:  64%|██████▎   | 114/179 [00:05<00:03, 21.29it/s]Loading weights:  70%|██████▉   | 125/179 [00:05<00:02, 21.45it/s]Loading weights:  76%|███████▌  | 136/179 [00:06<00:02, 20.75it/s]Loading weights:  82%|████████▏ | 147/179 [00:06<00:01, 20.87it/s]Loading weights:  88%|████████▊ | 158/179 [00:07<00:00, 21.40it/s]Loading weights:  94%|█████████▍| 169/179 [00:07<00:00, 22.55it/s]Loading weights: 100%|██████████| 179/179 [00:07<00:00, 22.61it/s]
+e05: 32 prompts in 124 slots
+  e05: step 100 active 9 queued 0 514 tok/s peak 37.5 GB
+  e05: step 200 active 2 queued 0 417 tok/s peak 37.5 GB
+  e05: step 300 active 2 queued 0 349 tok/s peak 37.5 GB
+  e05: step 400 active 2 queued 0 305 tok/s peak 37.5 GB
+  e05: step 500 active 1 queued 0 274 tok/s peak 37.5 GB
+e05 controls: {"n": 32, "prefix16": 1.0, "exact": 1.0, "required": 0.8, "passed": true, "stats": [{"steps": 511, "tokens": 3572, "prompts": 32, "slots": 124, "seconds": 13.2}]}
+e05: 1456 to generate, 0 already done
+e05: 1417 prompts in 112 slots
+  e05: step 100 active 111 queued 1278 1166 tok/s peak 57.7 GB
+  e05: step 200 active 111 queued 1228 1232 tok/s peak 57.7 GB
+  e05: step 300 active 112 queued 1176 1251 tok/s peak 57.7 GB
+  e05: step 400 active 111 queued 1114 1232 tok/s peak 57.7 GB
+  e05: step 500 active 112 queued 1040 1216 tok/s peak 57.7 GB
+  e05: step 600 active 112 queued 917 1188 tok/s peak 57.7 GB
+  e05: step 700 active 110 queued 816 1172 tok/s peak 57.7 GB
+  e05: step 800 active 111 queued 715 1163 tok/s peak 57.7 GB
+  e05: step 900 active 112 queued 582 1143 tok/s peak 57.7 GB
+  e05: step 1000 active 112 queued 413 1120 tok/s peak 57.7 GB
+  e05: step 1100 active 109 queued 227 1106 tok/s peak 57.7 GB
+  e05: step 1200 active 49 queued 0 1087 tok/s peak 57.7 GB
+  e05: step 1300 active 11 queued 0 1072 tok/s peak 57.7 GB
+  e05: step 1400 active 10 queued 0 1056 tok/s peak 57.7 GB
+  e05: step 1500 active 6 queued 0 1040 tok/s peak 57.7 GB
+  e05: step 1600 active 2 queued 0 1027 tok/s peak 57.7 GB
+e05: 39 prompts in 37 slots
+  e05: step 100 active 25 queued 0 457 tok/s peak 57.7 GB
+  e05: step 200 active 10 queued 0 442 tok/s peak 57.7 GB
+  e05: step 300 active 6 queued 0 407 tok/s peak 57.7 GB
+  e05: step 400 active 3 queued 0 372 tok/s peak 57.7 GB
+  e05: step 500 active 3 queued 0 344 tok/s peak 57.7 GB
+e05: DONE 1456 generations in 156.9 s
+=== 21:20:51 a40, cache 26 GB
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:27,  6.28it/s]Loading weights:   8%|▊         | 15/179 [00:01<00:13, 12.30it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:10, 14.80it/s]Loading weights:  21%|██        | 37/179 [00:02<00:08, 16.11it/s]Loading weights:  27%|██▋       | 48/179 [00:03<00:07, 17.78it/s]Loading weights:  33%|███▎      | 59/179 [00:03<00:06, 18.99it/s]Loading weights:  39%|███▉      | 70/179 [00:04<00:05, 20.00it/s]Loading weights:  45%|████▌     | 81/179 [00:04<00:05, 19.60it/s]Loading weights:  51%|█████▏    | 92/179 [00:05<00:04, 19.24it/s]Loading weights:  58%|█████▊    | 103/179 [00:05<00:03, 19.96it/s]Loading weights:  64%|██████▎   | 114/179 [00:06<00:03, 20.48it/s]Loading weights:  70%|██████▉   | 125/179 [00:06<00:02, 20.77it/s]Loading weights:  76%|███████▌  | 136/179 [00:07<00:02, 21.20it/s]Loading weights:  82%|████████▏ | 147/179 [00:07<00:01, 20.33it/s]Loading weights:  88%|████████▊ | 158/179 [00:08<00:01, 20.77it/s]Loading weights:  94%|█████████▍| 169/179 [00:08<00:00, 21.02it/s]Loading weights: 100%|██████████| 179/179 [00:08<00:00, 20.04it/s]
+a40: 32 prompts in 124 slots
+  a40: step 100 active 20 queued 0 541 tok/s peak 37.5 GB
+  a40: step 200 active 11 queued 0 511 tok/s peak 37.5 GB
+  a40: step 300 active 7 queued 0 462 tok/s peak 37.5 GB
+  a40: step 400 active 5 queued 0 422 tok/s peak 37.5 GB
+  a40: step 500 active 3 queued 0 389 tok/s peak 37.5 GB
+a40 controls: {"n": 32, "prefix16": 1.0, "exact": 1.0, "required": 0.8, "passed": true, "stats": [{"steps": 511, "tokens": 6079, "prompts": 32, "slots": 124, "seconds": 15.8}]}
+a40: 1456 to generate, 0 already done
+a40: 1417 prompts in 112 slots
+  a40: step 100 active 112 queued 1294 1331 tok/s peak 57.7 GB
+  a40: step 200 active 112 queued 1282 1459 tok/s peak 57.7 GB
+  a40: step 300 active 112 queued 1270 1487 tok/s peak 57.7 GB
+  a40: step 400 active 112 queued 1250 1473 tok/s peak 57.7 GB
+  a40: step 500 active 111 queued 1216 1433 tok/s peak 57.7 GB
+  a40: step 600 active 111 queued 1154 1410 tok/s peak 57.7 GB
+  a40: step 700 active 112 queued 1117 1399 tok/s peak 57.7 GB
+  a40: step 800 active 112 queued 1071 1377 tok/s peak 57.7 GB
+  a40: step 900 active 110 queued 1016 1354 tok/s peak 57.7 GB
+  a40: step 1000 active 112 queued 951 1339 tok/s peak 57.7 GB
+  a40: step 1100 active 112 queued 887 1329 tok/s peak 57.7 GB
+  a40: step 1200 active 110 queued 805 1315 tok/s peak 57.7 GB
+  a40: step 1300 active 112 queued 719 1300 tok/s peak 57.7 GB
+  a40: step 1400 active 112 queued 613 1280 tok/s peak 57.7 GB
+  a40: step 1500 active 111 queued 487 1256 tok/s peak 57.7 GB
+  a40: step 1600 active 109 queued 322 1231 tok/s peak 57.7 GB
+  a40: step 1700 active 98 queued 33 1201 tok/s peak 57.7 GB
+  a40: step 1800 active 16 queued 0 1188 tok/s peak 57.7 GB
+  a40: step 1900 active 6 queued 0 1174 tok/s peak 57.7 GB
+  a40: step 2000 active 2 queued 0 1161 tok/s peak 57.7 GB
+  a40: step 2100 active 1 queued 0 1149 tok/s peak 57.7 GB
+a40: 39 prompts in 37 slots
+  a40: step 100 active 33 queued 0 483 tok/s peak 57.7 GB
+  a40: step 200 active 15 queued 0 480 tok/s peak 57.7 GB
+  a40: step 300 active 11 queued 0 454 tok/s peak 57.7 GB
+  a40: step 400 active 8 queued 0 429 tok/s peak 57.7 GB
+  a40: step 500 active 7 queued 0 408 tok/s peak 57.7 GB
+a40: DONE 1456 generations in 194.6 s
+=== 21:24:40 finished: base=0 lora=0 e05=0 a40=0

@@ -1,0 +1,472 @@
+{
+ "checks": {
+  "trainable_set_is_new_rows_and_new_experts": {
+   "ok": true,
+   "trainable": 100696064,
+   "expected": 100696064,
+   "trainable_pct": 1.4344
+  },
+  "original_64_rows_and_experts_frozen": {
+   "ok": true
+  },
+  "new_expert_is_exact_copy_and_row_is_copy_plus_small_noise": {
+   "ok": true,
+   "copy_from": [
+    41,
+    25,
+    40,
+    39,
+    19,
+    2,
+    18,
+    35,
+    3,
+    39,
+    16,
+    63,
+    8,
+    11,
+    28,
+    8
+   ],
+   "max_row_rel_diff": 0.0010250472696498036
+  },
+  "calibrated_rate_on_calibration_tokens": {
+   "ok": true,
+   "target": 0.125,
+   "rates": [
+    0.125,
+    0.125,
+    0.125,
+    0.1246,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125,
+    0.125
+   ]
+  },
+  "disabled_equals_base": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "tol": 0.001
+  },
+  "init_changes_the_model_only_moderately": {
+   "ok": true,
+   "mean_abs_logp_shift": 3.6303,
+   "max_abs_logp_shift": 18.8074,
+   "note": "softmax over 65 rescales the original experts and the copy displaces the 8th expert"
+  },
+  "online_reference_equals_frozen_base": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "tol": 0.001
+  },
+  "ref_cache_within_batch_shape_noise": {
+   "ok": true,
+   "max_abs_diff": 0.0001
+  },
+  "step0_grad_on_every_trainable_tensor_and_none_on_frozen": {
+   "ok": true,
+   "nonzero": {
+    "re_row": 16,
+    "re_gate_up": 16,
+    "re_down": 16
+   },
+   "frozen_with_grad": 0,
+   "grad_norm": 12.617558
+  },
+  "step0_update_moves_every_trainable_tensor": {
+   "ok": true,
+   "re_row": 16,
+   "re_gate_up": 16,
+   "re_down": 16
+  },
+  "step1_grad_on_every_trainable_tensor_and_none_on_frozen": {
+   "ok": true,
+   "nonzero": {
+    "re_row": 16,
+    "re_gate_up": 16,
+    "re_down": 16
+   },
+   "frozen_with_grad": 0,
+   "grad_norm": 3.900252
+  },
+  "step1_update_moves_every_trainable_tensor": {
+   "ok": true,
+   "re_row": 16,
+   "re_gate_up": 16,
+   "re_down": 16
+  },
+  "loss_decreases_after_two_steps": {
+   "ok": true,
+   "losses": [
+    4.97379,
+    1.15365,
+    0.56863
+   ]
+  },
+  "frozen_weights_bit_identical_after_updates": {
+   "ok": true,
+   "n_frozen_tensors": 179,
+   "changed": []
+  },
+  "reference_unchanged_after_updates": {
+   "ok": true,
+   "max_abs_diff": 0.0
+  },
+  "save_reload_round_trip": {
+   "ok": true,
+   "max_abs_diff": 0.0,
+   "sha256": "16da452b82a4"
+  }
+ },
+ "all_ok": true,
+ "n_examples": 8,
+ "grads": [
+  {
+   "re_row": 16,
+   "re_gate_up": 16,
+   "re_down": 16,
+   "grad_norm": 12.617558479309082,
+   "rate_mean": 0.12539525691699605
+  },
+  {
+   "re_row": 16,
+   "re_gate_up": 16,
+   "re_down": 16,
+   "grad_norm": 3.900251865386963,
+   "rate_mean": 0.12659749670619236
+  }
+ ],
+ "losses": [
+  4.973791122436523,
+  1.1536455154418945,
+  0.56862872838974
+ ],
+ "calibration": {
+  "tokens": 72168,
+  "rate_mean": 0.1249731529209622,
+  "rate_by_layer": [
+   0.12498614344307726,
+   0.125,
+   0.125,
+   0.12459815984924066,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.125,
+   0.12498614344307726,
+   0.125
+  ],
+  "weight_when_selected_by_layer": [
+   0.022612317544129366,
+   0.030040632712445916,
+   0.030855493658649567,
+   0.057090506434864845,
+   0.03228851802966743,
+   0.03751095889241293,
+   0.028169604894420074,
+   0.04003693081959694,
+   0.03979814857353512,
+   0.04584301803820599,
+   0.04132586716944859,
+   0.042014585367500246,
+   0.05250279251401407,
+   0.042904275019461424,
+   0.04039413130732703,
+   0.047038619262708845
+  ],
+  "prob_by_layer": [
+   0.00841062891682848,
+   0.012521643765999993,
+   0.01359659287343069,
+   0.017958046393335796,
+   0.01351129605650915,
+   0.015328241523122751,
+   0.010534047789722202,
+   0.013297126874890933,
+   0.016351849947439805,
+   0.01590007039425233,
+   0.013442328203254365,
+   0.014978793095279039,
+   0.016479482567240297,
+   0.015076986451778532,
+   0.015300339809900218,
+   0.01509472060766496
+  ],
+  "copy_from": [
+   41,
+   25,
+   40,
+   39,
+   19,
+   2,
+   18,
+   35,
+   3,
+   39,
+   16,
+   63,
+   8,
+   11,
+   28,
+   8
+  ],
+  "source_rate": [
+   0.3756,
+   0.3095,
+   0.3388,
+   0.251,
+   0.324,
+   0.2586,
+   0.37,
+   0.2164,
+   0.2766,
+   0.2744,
+   0.2288,
+   0.3062,
+   0.287,
+   0.3257,
+   0.2934,
+   0.3647
+  ],
+  "bias": [
+   -1.1501439809799194,
+   -0.4148229956626892,
+   -0.4312216341495514,
+   -0.2817554175853729,
+   -0.4967358112335205,
+   -0.3587498068809509,
+   -0.7749290764331818,
+   -0.33759212493896484,
+   -0.3999422490596771,
+   -0.4455749839544296,
+   -0.26864945888519287,
+   -0.5571649670600891,
+   -0.5142723619937897,
+   -0.5950890183448792,
+   -0.43433958292007446,
+   -0.7496219277381897
+  ],
+  "n_pairs": 128,
+  "seconds": 92.4
+ },
+ "step_seconds": 4.22,
+ "mem_alloc_gb": 27.49,
+ "mem_peak_gb": 35.6,
+ "mem_reserved_gb": 36.52,
+ "config": {
+  "args": {
+   "data": "/workspace/e08/code/data/secpo_olmoe_v2/pairs.jsonl",
+   "split": "/workspace/e08/code/experiments/modal/artifacts/splits/secpo_olmoe_v1_grouped_v1.json",
+   "out": "/workspace/e08/out/train_main/smoke",
+   "smoke": true,
+   "tiny": false,
+   "dtype": "float32",
+   "limit": null,
+   "strict_only": false,
+   "beta": 0.1,
+   "lr": 0.00016,
+   "epochs": 1.0,
+   "micro_batch": 8,
+   "grad_accum": 2,
+   "max_len": 1024,
+   "lora_r": 16,
+   "lora_alpha": 4.0,
+   "warmup_ratio": 0.03,
+   "max_grad_norm": 1.0,
+   "eval_every": 10,
+   "save_every_epoch": false,
+   "save_steps": "",
+   "eval_batch": 16,
+   "no_grad_ckpt": false,
+   "seed": 42,
+   "ref_cache": "/workspace/e08/ref_logps.json",
+   "method": "routed_expert",
+   "se_alpha_init": 0.1,
+   "se_init_std": null,
+   "re_router_only": false,
+   "re_copy": "most_used",
+   "re_target_rate": 0.125,
+   "re_row_noise": 0.001,
+   "re_calib_pairs": 128
+  },
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "dtype": "float32",
+  "device": "cuda",
+  "experts": "conditionally routed 65th expert per MoE layer (top-8 of 65)",
+  "method": "routed_expert",
+  "lora": null,
+  "security_expert": null,
+  "routed_expert": {
+   "router_only": false,
+   "copy": "most_used",
+   "target_rate": 0.125,
+   "row_noise_std": 0.001,
+   "calibration": {
+    "tokens": 72168,
+    "rate_mean": 0.1249731529209622,
+    "rate_by_layer": [
+     0.12498614344307726,
+     0.125,
+     0.125,
+     0.12459815984924066,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.125,
+     0.12498614344307726,
+     0.125
+    ],
+    "weight_when_selected_by_layer": [
+     0.022612317544129366,
+     0.030040632712445916,
+     0.030855493658649567,
+     0.057090506434864845,
+     0.03228851802966743,
+     0.03751095889241293,
+     0.028169604894420074,
+     0.04003693081959694,
+     0.03979814857353512,
+     0.04584301803820599,
+     0.04132586716944859,
+     0.042014585367500246,
+     0.05250279251401407,
+     0.042904275019461424,
+     0.04039413130732703,
+     0.047038619262708845
+    ],
+    "prob_by_layer": [
+     0.00841062891682848,
+     0.012521643765999993,
+     0.01359659287343069,
+     0.017958046393335796,
+     0.01351129605650915,
+     0.015328241523122751,
+     0.010534047789722202,
+     0.013297126874890933,
+     0.016351849947439805,
+     0.01590007039425233,
+     0.013442328203254365,
+     0.014978793095279039,
+     0.016479482567240297,
+     0.015076986451778532,
+     0.015300339809900218,
+     0.01509472060766496
+    ],
+    "copy_from": [
+     41,
+     25,
+     40,
+     39,
+     19,
+     2,
+     18,
+     35,
+     3,
+     39,
+     16,
+     63,
+     8,
+     11,
+     28,
+     8
+    ],
+    "source_rate": [
+     0.3756,
+     0.3095,
+     0.3388,
+     0.251,
+     0.324,
+     0.2586,
+     0.37,
+     0.2164,
+     0.2766,
+     0.2744,
+     0.2288,
+     0.3062,
+     0.287,
+     0.3257,
+     0.2934,
+     0.3647
+    ],
+    "bias": [
+     -1.1501439809799194,
+     -0.4148229956626892,
+     -0.4312216341495514,
+     -0.2817554175853729,
+     -0.4967358112335205,
+     -0.3587498068809509,
+     -0.7749290764331818,
+     -0.33759212493896484,
+     -0.3999422490596771,
+     -0.4455749839544296,
+     -0.26864945888519287,
+     -0.5571649670600891,
+     -0.5142723619937897,
+     -0.5950890183448792,
+     -0.43433958292007446,
+     -0.7496219277381897
+    ],
+    "n_pairs": 128,
+    "seconds": 92.4
+   },
+   "init_seed": 42,
+   "base_model": "allenai/OLMoE-1B-7B-0125-Instruct",
+   "base_revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e"
+  },
+  "params": {
+   "trainable": 100696064,
+   "trainable_pct": 1.4344,
+   "trainable_by_group": {
+    "row": 32768,
+    "gate_up_proj": 67108864,
+    "down_proj": 33554432
+   },
+   "non_routed_expert_trainable": [],
+   "n_blocks": 16,
+   "original_router_trainable": []
+  },
+  "objective": "official SecPO sigmoid loss, summed response log-probs, ref = base on clean prompt",
+  "secpo_reference": "github.com/Sizhe-Chen/SecPO@da0372a0e598badf4e51c98c175a962147cac2ac",
+  "data": "/workspace/e08/code/data/secpo_olmoe_v2/pairs.jsonl",
+  "data_sha256": "d6d3b74f26bcde30e33540dd772de17451326dd3e40c04a21cee6729fa5faffd",
+  "split": "secpo_olmoe_v1_grouped_v1",
+  "n_train": 1275,
+  "n_val": 225,
+  "effective_batch": 16,
+  "steps_per_epoch": 80,
+  "total_steps": 80,
+  "warmup_steps": 3,
+  "lr_schedule": "linear warmup + linear decay",
+  "optimizer": "AdamW (betas 0.9/0.999, eps 1e-8, weight_decay 0)",
+  "gradient_checkpointing": true,
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "peft": "0.21.3",
+  "gpu": "NVIDIA H100 80GB HBM3"
+ },
+ "load_seconds": 54.3,
+ "ref_seconds": 0.0
+}

@@ -1,0 +1,56 @@
+{
+  "step": "e07_generate",
+  "variant": "a40",
+  "model": "allenai/OLMoE-1B-7B-0125-Instruct",
+  "revision": "b89a7c4bc24fb9e55ce2543c9458ce0ca5c4650e",
+  "dtype": "float32",
+  "checkpoint_sha256": "5607b816d9943449be7e37af7362c4bec63b303a920db55b8e3490d3fa9b7bd8",
+  "tiny_random": false,
+  "data": "data/alpacafarm_secalign_208x6.jsonl",
+  "data_sha256": "97f341f3e857fca5368fc1e0074fc0ccff8683762bb80ee33728781b26e707d7",
+  "prompt_ids_sha256": "011f239c70d1d6a21777b5df4296e6a2ff7b0811606f63703d8c6a4ce6b43673",
+  "conditions": [
+    "clean",
+    "straightforward",
+    "straightforward_before",
+    "ignore",
+    "ignore_before",
+    "completion",
+    "completion_ignore"
+  ],
+  "n_records": 208,
+  "n_generations": 1456,
+  "max_new_tokens": 512,
+  "do_sample": false,
+  "eos_ids": [
+    50279
+  ],
+  "chat_template": "OLMoE tokenizer template; system = instruction, user = data; add_generation_prompt",
+  "engine": "moe_interp.slot_generate",
+  "experts_implementation": "grouped_mm",
+  "attn_implementation": "sdpa",
+  "cache_gb": 26.0,
+  "tiers": [
+    {
+      "steps": 2148,
+      "tokens": 197301,
+      "prompts": 1417,
+      "slots": 112,
+      "seconds": 172.5
+    },
+    {
+      "steps": 511,
+      "tokens": 8844,
+      "prompts": 39,
+      "slots": 37,
+      "seconds": 21.8
+    }
+  ],
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "peak_gpu_gb": 57.73,
+  "torch": "2.14.1+cu130",
+  "transformers": "5.22.1",
+  "load_seconds": 14.8,
+  "generate_seconds": 194.6,
+  "generations_sha256": "e2d9f0f1594a0007720e9bb38c4617ffd11c3d0dadbb9e9eef756632578af11d"
+}

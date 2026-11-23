@@ -1,0 +1,67 @@
+{
+  "dataset": "alpacafarm_secalign_208x6.jsonl",
+  "generator": "scripts/build_alpacafarm_six_attacks.py",
+  "generator_sha256": "238890998e519ab6a188fd859abb1e43266dd7aa0a9dcea45aee4fc846ac0f67",
+  "output_sha256": "97f341f3e857fca5368fc1e0074fc0ccff8683762bb80ee33728781b26e707d7",
+  "source_sha256": "3ceca3c350bb4bcb244512e9f1ff8a26fe911aa3d282e003844b7294ce3aab28",
+  "reference": {
+    "repo": "hamishivi/alpaca-farm-davinci-003-2048-token",
+    "revision": "95d6ffdab97aaf797acfe61661cdc8f9bc8757db",
+    "file": "davinci_003_outputs.json",
+    "sha256": "c5f1b89b610d4d37f2bb22ad187f798278258df7ccdd59bface4a7d2f532f0ec",
+    "n_empty": 4
+  },
+  "definitions": "facebookresearch/Meta_SecAlign test.py, non-adaptive",
+  "attacks": [
+    "straightforward",
+    "straightforward_before",
+    "ignore",
+    "ignore_before",
+    "completion",
+    "completion_ignore"
+  ],
+  "seed": 0,
+  "n_samples": 208,
+  "n_injected_prompts": 1248,
+  "ignore_template_counts": {
+    "ignore": {
+      "0": 23,
+      "1": 20,
+      "2": 16,
+      "3": 23,
+      "4": 18,
+      "5": 22,
+      "6": 16,
+      "7": 18,
+      "8": 15,
+      "9": 19,
+      "10": 18
+    },
+    "ignore_before": {
+      "0": 25,
+      "1": 13,
+      "2": 22,
+      "3": 17,
+      "4": 18,
+      "5": 10,
+      "6": 22,
+      "7": 20,
+      "8": 21,
+      "9": 21,
+      "10": 19
+    },
+    "completion_ignore": {
+      "0": 20,
+      "1": 17,
+      "2": 29,
+      "3": 20,
+      "4": 15,
+      "5": 24,
+      "6": 11,
+      "7": 13,
+      "8": 23,
+      "9": 22,
+      "10": 14
+    }
+  }
+}

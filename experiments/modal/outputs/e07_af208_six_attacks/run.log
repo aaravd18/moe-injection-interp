@@ -1,0 +1,36 @@
+verifying base model
+=== 21:32:54 b80, cache 26 GB
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:21,  7.97it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:08, 18.23it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:07, 21.80it/s]Loading weights:  21%|██        | 37/179 [00:01<00:06, 22.22it/s]Loading weights:  27%|██▋       | 48/179 [00:02<00:05, 22.23it/s]Loading weights:  33%|███▎      | 59/179 [00:02<00:05, 22.24it/s]Loading weights:  39%|███▉      | 70/179 [00:03<00:04, 23.41it/s]Loading weights:  45%|████▌     | 81/179 [00:03<00:04, 24.49it/s]Loading weights:  51%|█████▏    | 92/179 [00:04<00:03, 24.02it/s]Loading weights:  58%|█████▊    | 103/179 [00:04<00:03, 24.66it/s]Loading weights:  64%|██████▎   | 114/179 [00:05<00:02, 22.67it/s]Loading weights:  70%|██████▉   | 125/179 [00:05<00:02, 22.35it/s]Loading weights:  76%|███████▌  | 136/179 [00:06<00:01, 22.25it/s]Loading weights:  82%|████████▏ | 147/179 [00:06<00:01, 22.14it/s]Loading weights:  88%|████████▊ | 158/179 [00:07<00:00, 21.94it/s]Loading weights:  94%|█████████▍| 169/179 [00:07<00:00, 20.60it/s]Loading weights: 100%|██████████| 179/179 [00:07<00:00, 22.94it/s]
+b80: 32 prompts in 124 slots
+  b80: step 100 active 13 queued 0 475 tok/s peak 37.5 GB
+  b80: step 200 active 4 queued 0 397 tok/s peak 37.5 GB
+  b80: step 300 active 3 queued 0 343 tok/s peak 37.5 GB
+  b80: step 400 active 2 queued 0 306 tok/s peak 37.5 GB
+  b80: step 500 active 1 queued 0 271 tok/s peak 37.5 GB
+b80 controls: {"n": 32, "prefix16": 1.0, "exact": 1.0, "required": 0.8, "passed": true, "stats": [{"steps": 511, "tokens": 3581, "prompts": 32, "slots": 124, "seconds": 13.4}]}
+b80: 1456 to generate, 0 already done
+b80: 1417 prompts in 112 slots
+  b80: step 100 active 111 queued 1293 1239 tok/s peak 57.7 GB
+  b80: step 200 active 112 queued 1267 1347 tok/s peak 57.7 GB
+  b80: step 300 active 111 queued 1229 1347 tok/s peak 57.7 GB
+  b80: step 400 active 110 queued 1179 1321 tok/s peak 57.7 GB
+  b80: step 500 active 110 queued 1120 1289 tok/s peak 57.7 GB
+  b80: step 600 active 111 queued 1036 1250 tok/s peak 57.7 GB
+  b80: step 700 active 111 queued 957 1241 tok/s peak 57.7 GB
+  b80: step 800 active 111 queued 862 1226 tok/s peak 57.7 GB
+  b80: step 900 active 112 queued 757 1209 tok/s peak 57.7 GB
+  b80: step 1000 active 111 queued 621 1187 tok/s peak 57.7 GB
+  b80: step 1100 active 109 queued 452 1166 tok/s peak 57.7 GB
+  b80: step 1200 active 103 queued 169 1139 tok/s peak 57.7 GB
+  b80: step 1300 active 20 queued 0 1118 tok/s peak 57.7 GB
+  b80: step 1400 active 6 queued 0 1101 tok/s peak 57.7 GB
+  b80: step 1500 active 4 queued 0 1086 tok/s peak 57.7 GB
+  b80: step 1600 active 1 queued 0 1072 tok/s peak 57.7 GB
+b80: 39 prompts in 37 slots
+  b80: step 100 active 24 queued 0 495 tok/s peak 57.7 GB
+  b80: step 200 active 14 queued 0 462 tok/s peak 57.7 GB
+  b80: step 300 active 9 queued 0 420 tok/s peak 57.7 GB
+  b80: step 400 active 6 queued 0 394 tok/s peak 57.7 GB
+  b80: step 500 active 3 queued 0 369 tok/s peak 57.7 GB
+b80: DONE 1456 generations in 155.3 s
+=== 21:35:59 finished: b80=0

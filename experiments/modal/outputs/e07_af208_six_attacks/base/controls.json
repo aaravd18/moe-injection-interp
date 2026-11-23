@@ -1,0 +1,16 @@
+{
+  "n": 32,
+  "prefix16": 0.65625,
+  "exact": 0.3125,
+  "required": 0.65,
+  "passed": true,
+  "stats": [
+    {
+      "steps": 511,
+      "tokens": 6822,
+      "prompts": 32,
+      "slots": 124,
+      "seconds": 16.3
+    }
+  ]
+}

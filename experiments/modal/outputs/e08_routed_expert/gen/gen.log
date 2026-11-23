@@ -1,0 +1,26 @@
+Loading weights:   0%|          | 0/179 [00:00<?, ?it/s]Loading weights:   2%|▏         | 4/179 [00:00<00:21,  7.99it/s]Loading weights:   8%|▊         | 15/179 [00:00<00:09, 16.65it/s]Loading weights:  15%|█▍        | 26/179 [00:01<00:07, 20.92it/s]Loading weights:  21%|██        | 37/179 [00:01<00:06, 21.29it/s]Loading weights:  27%|██▋       | 48/179 [00:02<00:06, 20.26it/s]Loading weights:  33%|███▎      | 59/179 [00:03<00:06, 19.42it/s]Loading weights:  39%|███▉      | 70/179 [00:03<00:06, 18.13it/s]Loading weights:  45%|████▌     | 81/179 [00:04<00:05, 19.23it/s]Loading weights:  51%|█████▏    | 92/179 [00:04<00:04, 19.94it/s]Loading weights:  58%|█████▊    | 103/179 [00:05<00:03, 21.57it/s]Loading weights:  64%|██████▎   | 114/179 [00:05<00:02, 22.09it/s]Loading weights:  70%|██████▉   | 125/179 [00:06<00:02, 23.12it/s]Loading weights:  76%|███████▌  | 136/179 [00:06<00:01, 21.59it/s]Loading weights:  82%|████████▏ | 147/179 [00:07<00:01, 21.68it/s]Loading weights:  88%|████████▊ | 158/179 [00:07<00:00, 21.73it/s]Loading weights:  94%|█████████▍| 169/179 [00:08<00:00, 21.95it/s]Loading weights: 100%|██████████| 179/179 [00:08<00:00, 21.84it/s]
+re_main_s80: 1456 to generate, 0 already done
+re_main_s80: 1417 prompts in 112 slots
+  re_main_s80: step 100 active 109 queued 1256 955 tok/s peak 57.7 GB
+  re_main_s80: step 200 active 110 queued 1154 969 tok/s peak 57.7 GB
+  re_main_s80: step 300 active 109 queued 1027 960 tok/s peak 57.7 GB
+  re_main_s80: step 400 active 108 queued 881 947 tok/s peak 57.7 GB
+  re_main_s80: step 500 active 109 queued 730 940 tok/s peak 57.7 GB
+  re_main_s80: step 600 active 109 queued 596 944 tok/s peak 57.7 GB
+  re_main_s80: step 700 active 112 queued 464 948 tok/s peak 57.7 GB
+  re_main_s80: step 800 active 112 queued 346 948 tok/s peak 57.7 GB
+  re_main_s80: step 900 active 112 queued 215 950 tok/s peak 57.7 GB
+  re_main_s80: step 1000 active 111 queued 98 960 tok/s peak 57.7 GB
+  re_main_s80: step 1100 active 72 queued 0 969 tok/s peak 57.7 GB
+  re_main_s80: step 1200 active 24 queued 0 963 tok/s peak 57.7 GB
+  re_main_s80: step 1300 active 12 queued 0 949 tok/s peak 57.7 GB
+  re_main_s80: step 1400 active 4 queued 0 934 tok/s peak 57.7 GB
+  re_main_s80: step 1500 active 2 queued 0 921 tok/s peak 57.7 GB
+re_main_s80: 39 prompts in 37 slots
+  re_main_s80: step 100 active 24 queued 0 441 tok/s peak 57.7 GB
+  re_main_s80: step 200 active 10 queued 0 409 tok/s peak 57.7 GB
+  re_main_s80: step 300 active 4 queued 0 372 tok/s peak 57.7 GB
+  re_main_s80: step 400 active 4 queued 0 342 tok/s peak 57.7 GB
+  re_main_s80: step 500 active 2 queued 0 317 tok/s peak 57.7 GB
+re_main_s80: DONE 1456 generations in 164.1 s
+=== 22:35:53 generation finished: re_main_s80=0

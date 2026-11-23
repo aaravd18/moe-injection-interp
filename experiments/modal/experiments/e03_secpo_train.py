@@ -270,7 +270,7 @@ def evaluate(policy, exs, cache, args, pad_id, device, autocast) -> dict:
             o = secpo_loss(pc, pr, *ref_tensors(cache, chunk, device), args.beta)
             for i, e in enumerate(chunk):
                 rows.append((e["strict"], o["losses"][i].item(), o["logits"][i].item(), (pc[i] - pr[i]).item(),
-                             o["chosen_rewards"][i].item(), o["rejected_rewards"][i].item()))
+                             o["chosen_rewards"][i].item(), o["rejected_rewards"][i].item(), pc[i].item(), pr[i].item()))
     policy.train()
 
     def agg(rs):
@@ -281,7 +281,8 @@ def evaluate(policy, exs, cache, args, pad_id, device, autocast) -> dict:
             "secpo_acc": sum(r[2] > 0 for r in rs) / n,
             "policy_logratio_adv": sum(r[3] for r in rs) / n,      # log pi(y_w|x_adv) - log pi(y_l|x_adv)
             "policy_prefers_chosen_adv": sum(r[3] > 0 for r in rs) / n,
-            "chosen_reward": sum(r[4] for r in rs) / n, "rejected_reward": sum(r[5] for r in rs) / n}
+            "chosen_reward": sum(r[4] for r in rs) / n, "rejected_reward": sum(r[5] for r in rs) / n,
+            "logp_chosen": sum(r[6] for r in rs) / n, "logp_rejected": sum(r[7] for r in rs) / n}
 
     return {"all": agg(rows), "strict": agg([r for r in rows if r[0]])}
 
@@ -558,6 +559,123 @@ def smoke_security_expert(model, layout, train, cache, args, pad_id, device, aut
             "alphas_after_two_steps": SE.alphas(model), "step_seconds": round(step_s, 2), **gpu_mem(device)}
 
 
+def smoke_routed_expert(model, layout, train, cache, args, pad_id, device, autocast, rep: dict, pre: dict,
+                        out: Path, calib: dict) -> dict:
+    """E08 checks on one batch: trainable set, copy init, exact base when disabled, reference, calibrated rates,
+    gradients only on the new row (+ expert), frozen weights bit-identical after two updates, loss decreases, reload."""
+    import torch
+
+    from moe_interp import routed_expert as RE
+
+    exs = train[: args.micro_batch]
+    tol, loose = 1e-3, 5.0
+    checks = {}
+
+    def check(name, ok, **info):
+        checks[name] = {"ok": bool(ok), **info}
+        print(f"[smoke] {'PASS' if ok else 'FAIL'} {name} {json.dumps(info)}", flush=True)
+
+    bs = RE.blocks(model)
+    n_l = len(layout.moe_blocks)
+    H, I = model.config.hidden_size, model.config.intermediate_size
+    want = n_l * (H + 3 * I * H)
+    check("trainable_set_is_new_rows_and_new_experts",
+          rep["trainable"] == want and not rep["non_routed_expert_trainable"] and not rep["original_router_trainable"]
+          and len(bs) == n_l, trainable=rep["trainable"], expected=want, trainable_pct=rep["trainable_pct"])
+    check("original_64_rows_and_experts_frozen",
+          all(not b.gate.weight.requires_grad and not b.experts.gate_up_proj.requires_grad
+              and not b.experts.down_proj.requires_grad for b in bs))
+    rel = max(((b.re_row[0] - b.gate.weight[b.re_copy]).norm() / b.gate.weight[b.re_copy].norm()).item() for b in bs)
+    check("new_expert_is_exact_copy_and_row_is_copy_plus_small_noise",
+          all(torch.equal(b.re_gate_up, b.experts.gate_up_proj[b.re_copy])
+              and torch.equal(b.re_down, b.experts.down_proj[b.re_copy]) for b in bs) and rel < 10 * args.re_row_noise + 1e-12,
+          copy_from=[b.re_copy for b in bs], max_row_rel_diff=rel)
+    check("calibrated_rate_on_calibration_tokens", all(abs(r - args.re_target_rate) < 0.01 for r in calib["rate_by_layer"]),
+          target=args.re_target_rate, rates=[round(r, 4) for r in calib["rate_by_layer"]])
+
+    model.train()
+    ids, att, _, _ = collate(exs, "policy_prompt", args.max_len, pad_id, device)
+    with torch.no_grad(), autocast():
+        with RE.routed_experts_disabled(model):
+            lg_off = model(input_ids=ids, attention_mask=att, use_cache=False).logits
+        pc0, pr0, _ = pair_logps(model, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+        with RE.routed_experts_disabled(model):
+            pc_off, pr_off, _ = pair_logps(model, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+    d_off = max((pc_off - pre["bc"]).abs().max().item(), (pr_off - pre["br"]).abs().max().item())
+    check("disabled_equals_base", d_off <= tol, max_abs_diff=d_off, tol=tol)
+    shift = torch.cat([pc0 - pre["bc"], pr0 - pre["br"]])
+    check("init_changes_the_model_only_moderately", shift.abs().mean().item() < 50,
+          mean_abs_logp_shift=round(shift.abs().mean().item(), 4), max_abs_logp_shift=round(shift.abs().max().item(), 4),
+          note="softmax over 65 rescales the original experts and the copy displaces the 8th expert")
+    del lg_off
+    with torch.no_grad(), RE.routed_experts_disabled(model):
+        rc, rr, _ = pair_logps(model, exs, "ref_prompt", args.max_len, pad_id, device, autocast)
+    d = max((rc - pre["rc"]).abs().max().item(), (rr - pre["rr"]).abs().max().item())
+    check("online_reference_equals_frozen_base", d <= tol, max_abs_diff=round(d, 5), tol=tol)
+    crc, crr = ref_tensors(cache, exs, device)
+    dc = torch.cat([rc - crc, rr - crr]).abs()
+    check("ref_cache_within_batch_shape_noise", dc.max().item() <= loose, max_abs_diff=round(dc.max().item(), 4))
+
+    fp_before = frozen_fingerprint(model)
+    named = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
+    opt = torch.optim.AdamW([p for _, p in named], lr=args.lr, weight_decay=0.0)
+    kinds = ("re_row", "re_gate_up", "re_down")
+    kind = lambda n: n.rsplit(".", 1)[-1]  # noqa: E731
+    losses, grads = [], []
+    t0 = time.time()
+    for step in range(2):
+        with RE.record_routing(model) as rec:
+            pc, pr, _ = pair_logps(model, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+        loss = secpo_loss(pc, pr, crc, crr, args.beta)["losses"].mean()
+        losses.append(loss.item())
+        loss.backward()
+        nz = {k: sum(p.grad is not None and p.grad.abs().sum().item() > 0 for n, p in named if kind(n) == k) for k in kinds}
+        gn = torch.nn.utils.clip_grad_norm_([p for _, p in named], float("inf")).item()
+        grads.append(nz | {"grad_norm": gn, "rate_mean": rec.summary()["rate_mean"]})
+        frozen_grads = [n for n, p in model.named_parameters() if not p.requires_grad and p.grad is not None]
+        check(f"step{step}_grad_on_every_trainable_tensor_and_none_on_frozen",
+              all(v == n_l for v in nz.values()) and not frozen_grads and math.isfinite(gn) and gn > 0,
+              nonzero=nz, frozen_with_grad=len(frozen_grads), grad_norm=round(gn, 6))
+        before = {n: p.detach().clone() for n, p in named}
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        moved = {k: sum(not torch.equal(before[n], p.detach()) for n, p in named if kind(n) == k) for k in kinds}
+        check(f"step{step}_update_moves_every_trainable_tensor", all(v == n_l for v in moved.values()), **moved)
+        del before
+    step_s = time.time() - t0
+    with torch.no_grad():
+        pc1, pr1, _ = pair_logps(model, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+        loss2 = secpo_loss(pc1, pr1, crc, crr, args.beta)["losses"].mean().item()
+        with RE.routed_experts_disabled(model):
+            rc1, rr1, _ = pair_logps(model, exs, "ref_prompt", args.max_len, pad_id, device, autocast)
+    check("loss_decreases_after_two_steps", loss2 < losses[0], losses=[round(x, 5) for x in losses + [loss2]])
+    fp_after = frozen_fingerprint(model)
+    changed = [n for n in fp_before if fp_before[n] != fp_after[n]]
+    check("frozen_weights_bit_identical_after_updates", not changed, n_frozen_tensors=len(fp_before), changed=changed[:5])
+    d1 = max((rc1 - pre["rc"]).abs().max().item(), (rr1 - pre["rr"]).abs().max().item())
+    check("reference_unchanged_after_updates", d1 <= tol, max_abs_diff=round(d1, 5))
+
+    sha = RE.save_routed_experts(model, out / "smoke_routed_expert")
+    keep = [(b.re_row.detach().clone(), b.re_gate_up.detach().clone(), b.re_down.detach().clone()) for b in bs]
+    from safetensors.torch import load_file
+
+    state = load_file(str(out / "smoke_routed_expert" / RE.WEIGHTS))
+    with torch.no_grad():
+        for i, b in enumerate(bs):
+            b.re_row.normal_()
+            b.re_row.copy_(state[f"layers.{i}.row"])
+            b.re_gate_up.copy_(state[f"layers.{i}.gate_up_proj"])
+            b.re_down.copy_(state[f"layers.{i}.down_proj"])
+        pc2, pr2, _ = pair_logps(model, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+    same = all(torch.equal(a, b.re_row) and torch.equal(c, b.re_gate_up) and torch.equal(e, b.re_down)
+               for (a, c, e), b in zip(keep, bs))
+    d2 = max((pc2 - pc1).abs().max().item(), (pr2 - pr1).abs().max().item())
+    check("save_reload_round_trip", same and d2 <= tol, max_abs_diff=d2, sha256=sha[:12])
+    return {"checks": checks, "all_ok": all(c["ok"] for c in checks.values()), "n_examples": len(exs),
+            "grads": grads, "losses": losses + [loss2], "calibration": calib, "step_seconds": round(step_s, 2),
+            **gpu_mem(device)}
+
+
 # ----------------------------------------------------------------------------------------------------------- main
 
 def main() -> None:
@@ -590,15 +708,25 @@ def main() -> None:
     ap.add_argument("--no-grad-ckpt", action="store_true")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--ref-cache", default=None, help="default: OUT/ref_logps.json")
-    ap.add_argument("--method", choices=["lora", "security_expert"], default="lora",
+    ap.add_argument("--method", choices=["lora", "security_expert", "routed_expert"], default="lora",
                     help="lora: LoRA on attention + experts (E03). security_expert: freeze all of OLMoE and train one "
                          "new always-active expert per MoE layer, h = h_MoE + alpha_l * S_l(x) (E05, "
                          "moe_interp/security_expert.py)")
     ap.add_argument("--se-alpha-init", type=float, default=0.1, help="security_expert: initial alpha_l")
     ap.add_argument("--se-init-std", type=float, default=None,
                     help="security_expert: std of the gate_up_proj init (default: config.initializer_range)")
+    ap.add_argument("--re-copy", default="most_used",
+                    help="routed_expert: 'most_used' (per layer, the expert the base routes most calibration tokens "
+                         "to) or a comma-separated expert id per layer")
+    ap.add_argument("--re-target-rate", type=float, default=0.125,
+                    help="routed_expert: share of tokens that select the new expert at init (8/64 = an average expert)")
+    ap.add_argument("--re-row-noise", type=float, default=1e-3,
+                    help="routed_expert: Gaussian noise on the copied router row, relative to its RMS (breaks ties)")
+    ap.add_argument("--re-calib-pairs", type=int, default=128,
+                    help="routed_expert: train pairs (policy prompt + chosen and + rejected) used for calibration")
     args = ap.parse_args()
     se_method = args.method == "security_expert"
+    re_method = args.method == "routed_expert"
 
     import torch
     import transformers
@@ -606,7 +734,7 @@ def main() -> None:
     try:
         import peft  # only the LoRA method needs it
     except ImportError:
-        if not se_method:
+        if not (se_method or re_method):
             raise
         peft = None
 
@@ -614,7 +742,7 @@ def main() -> None:
     from moe_interp.model import load_model
 
     out = Path(args.out)
-    save_name = "security_expert" if se_method else "adapter"
+    save_name = "security_expert" if se_method else "routed_expert" if re_method else "adapter"
     if not args.smoke and (out / save_name).exists():
         raise SystemExit(f"{out}/{save_name} already exists; choose a new --out")
     out.mkdir(parents=True, exist_ok=True)
@@ -673,7 +801,37 @@ def main() -> None:
             rc_, rr_, _ = pair_logps(lm.model, b, "ref_prompt", args.max_len, pad_id, device, autocast)
             bc_, br_, _ = pair_logps(lm.model, b, "policy_prompt", args.max_len, pad_id, device, autocast)
         pre = {"rc": rc_, "rr": rr_, "bc": bc_, "br": br_}
-    if se_method:
+    calib = None
+    if re_method:
+        from moe_interp import routed_expert as RE
+
+        lm.model.eval()
+        cal_exs = train[: args.re_calib_pairs]
+        cal_batches = [collate(cal_exs[b: b + args.eval_batch], "policy_prompt", args.max_len, pad_id, device)[:2]
+                       for b in range(0, len(cal_exs), args.eval_batch)]
+        tc = time.time()
+        with torch.no_grad(), autocast():
+            freq = RE.routing_frequency(lm.model, lm.layout, cal_batches)
+        copy_from = ([int(f.argmax()) for f in freq] if args.re_copy == "most_used"
+                     else [int(x) for x in args.re_copy.split(",")])
+        RE.add_routed_experts(lm.model, lm.layout, copy_from, row_noise_std=args.re_row_noise, seed=args.seed)
+        with autocast():
+            bias = RE.calibrate_bias(lm.model, cal_batches, args.re_target_rate)
+        with torch.no_grad(), autocast(), RE.record_routing(lm.model) as rec:
+            for ids_, att_ in cal_batches:
+                lm.model(input_ids=ids_, attention_mask=att_, use_cache=False)
+        calib = rec.summary() | {"copy_from": copy_from, "source_rate": [round(f[j].item(), 4) for f, j in zip(freq, copy_from)],
+                                 "bias": bias, "n_pairs": len(cal_exs), "seconds": round(time.time() - tc, 1)}
+        print(f"[routed_expert] calibration {json.dumps(calib)}", flush=True)
+        lm.model.config.use_cache = False
+        if not args.no_grad_ckpt:
+            lm.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+        policy, lora_cfg, expert_kind = lm.model, None, "conditionally routed 65th expert per MoE layer (top-8 of 65)"
+        rep = RE.param_report(policy)
+        print(f"[routed_expert] {json.dumps(rep)}", flush=True)
+        if rep["non_routed_expert_trainable"] or rep["original_router_trainable"]:
+            raise SystemExit("only the new router rows (and new experts) may be trainable")
+    elif se_method:
         from moe_interp import security_expert as SE
 
         SE.add_security_experts(lm.model, lm.layout, alpha_init=args.se_alpha_init, init_std=args.se_init_std,
@@ -696,6 +854,9 @@ def main() -> None:
     se_meta = {"alpha_init": args.se_alpha_init, "init_std": args.se_init_std if args.se_init_std is not None
                else lm.model.config.initializer_range, "init_seed": args.seed,
                "base_model": lm.info["model_id"], "base_revision": lm.info["requested_revision"]} if se_method else None
+    re_meta = {"copy": args.re_copy, "target_rate": args.re_target_rate,
+               "row_noise_std": args.re_row_noise, "calibration": calib, "init_seed": args.seed,
+               "base_model": lm.info["model_id"], "base_revision": lm.info["requested_revision"]} if re_method else None
 
     steps_per_epoch = math.ceil(len(train) / (args.micro_batch * args.grad_accum))
     total_steps = max(1, math.ceil(args.epochs * steps_per_epoch))
@@ -705,7 +866,7 @@ def main() -> None:
               "lora": None if lora_cfg is None else {
                   k: (sorted(v) if isinstance(v, set) else v) for k, v in lora_cfg.to_dict().items()
                   if k in ("r", "lora_alpha", "lora_dropout", "target_modules", "target_parameters", "bias")},
-              "security_expert": se_meta,
+              "security_expert": se_meta, "routed_expert": re_meta,
               "params": rep, "objective": "official SecPO sigmoid loss, summed response log-probs, ref = base on clean prompt",
               "secpo_reference": "github.com/Sizhe-Chen/SecPO@da0372a0e598badf4e51c98c175a962147cac2ac",
               "data": args.data, "data_sha256": header["data_sha256"], "split": split["name"],
@@ -717,7 +878,9 @@ def main() -> None:
               "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}
 
     if args.smoke:
-        res = (smoke_security_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out)
+        res = (smoke_routed_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out, calib)
+               if re_method else
+               smoke_security_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out)
                if se_method else smoke(policy, train, cache, args, pad_id, device, autocast, rep, pre))
         res.update({"config": config, "load_seconds": round(load_s, 1), "ref_seconds": round(ref_s, 1)})
         (out / "smoke_report.json").write_text(json.dumps(res, indent=1) + "\n")
@@ -748,6 +911,20 @@ def main() -> None:
                      "se_norm_by_layer": [round(x["se_norm"], 5) for x in c["layers"]],
                      "moe_norm_by_layer": [round(x["moe_norm"], 4) for x in c["layers"]],
                      "se_alpha": SE.alphas(policy), "se_tokens": c["tokens"]}
+        elif re_method:
+            with RE.record_routing(policy) as rec:
+                v = evaluate(policy, val, cache, args, pad_id, device, autocast)
+            policy.eval()
+            with torch.no_grad(), RE.record_routing(policy) as rec_clean:
+                for b in range(0, len(val), args.eval_batch):
+                    pair_logps(policy, val[b: b + args.eval_batch], "ref_prompt", args.max_len, pad_id, device, autocast)
+            policy.train()
+            c, cc = rec.summary(), rec_clean.summary()
+            extra = {"re_rate_injected": round(c["rate_mean"], 5), "re_rate_clean": round(cc["rate_mean"], 5),
+                     "re_rate_injected_by_layer": [round(x, 4) for x in c["rate_by_layer"]],
+                     "re_rate_clean_by_layer": [round(x, 4) for x in cc["rate_by_layer"]],
+                     "re_weight_when_selected_by_layer": [round(x, 4) for x in c["weight_when_selected_by_layer"]],
+                     "re_tokens": c["tokens"]}
         else:
             v, extra = evaluate(policy, val, cache, args, pad_id, device, autocast), {}
         log({"type": "val", "step": step, **{f"{s}/{k}": round(x, 5) if isinstance(x, float) else x
@@ -756,6 +933,10 @@ def main() -> None:
         return v
 
     def save(path: Path):
+        if re_method:
+            sha = RE.save_routed_experts(policy, path, re_meta)
+            tok.save_pretrained(path)
+            return sha
         if se_method:
             sha = SE.save_security_experts(policy, path, se_meta)
             tok.save_pretrained(path)
@@ -779,14 +960,20 @@ def main() -> None:
             group = micro[s: s + args.grad_accum]
             n_pairs = sum(len(m) for m in group)
             ts, acc, ntok = time.time(), {"loss": 0.0, "margin": 0.0, "acc": 0.0, "plr": 0.0, "cr": 0.0, "rr": 0.0}, 0
+            rec_ctx = RE.record_routing(policy) if re_method else nullcontext()
+            rec = rec_ctx.__enter__()
+            lp = {"c": 0.0, "r": 0.0}
             for exs in group:
                 pc, pr, nt = pair_logps(policy, exs, "policy_prompt", args.max_len, pad_id, device, autocast)
+                lp["c"] += pc.detach().sum().item() / n_pairs
+                lp["r"] += pr.detach().sum().item() / n_pairs
                 o = secpo_loss(pc, pr, *ref_tensors(cache, exs, device), args.beta)
                 (o["losses"].sum() / n_pairs).backward()  # mean over the pairs of this optimizer step
                 ntok += nt
                 for k, v in (("loss", o["losses"]), ("margin", o["logits"]), ("acc", (o["logits"] > 0).float()),
                              ("plr", pc - pr), ("cr", o["chosen_rewards"]), ("rr", o["rejected_rewards"])):
                     acc[k] += v.detach().sum().item() / n_pairs
+            rec_ctx.__exit__(None, None, None)
             gn = torch.nn.utils.clip_grad_norm_(params, args.max_grad_norm if args.max_grad_norm > 0 else float("inf"))
             lr = sched.get_last_lr()[0]
             opt.step()
@@ -797,7 +984,9 @@ def main() -> None:
             log({"type": "train", "step": step, "epoch": round(epoch + (s + len(group)) / len(micro), 3),
                  "loss": round(acc["loss"], 5), "secpo_margin": round(acc["margin"], 4), "secpo_acc": round(acc["acc"], 4),
                  "policy_logratio_adv": round(acc["plr"], 4), "chosen_reward": round(acc["cr"], 4),
-                 "rejected_reward": round(acc["rr"], 4), "grad_norm": round(gn.item(), 4), "lr": lr, "pairs": n_pairs,
+                 "rejected_reward": round(acc["rr"], 4), "logp_chosen": round(lp["c"], 3), "logp_rejected": round(lp["r"], 3),
+                 "grad_norm": round(gn.item(), 4), "lr": lr, "pairs": n_pairs,
+                 **({"re_rate": round(rec.summary()["rate_mean"], 5)} if re_method else {}),
                  **({"se_alpha_mean": round(sum(SE.alphas(policy)) / len(SE.alphas(policy)), 6)} if se_method else {}),
                  "tokens": ntok, "step_seconds": round(dt, 2), "tokens_per_s": round(ntok / dt),
                  "elapsed_s": round(time.time() - t_train, 1), **gpu_mem(device)})
@@ -813,7 +1002,7 @@ def main() -> None:
             save(out / f"{save_name}_epoch{epoch}")
             log({"type": "epoch_end", "epoch": epoch, "step": step, "adapter": f"{save_name}_epoch{epoch}",
                  "val_loss": v["all"]["loss"] if v else None,
-                 "expert_delta_realization": None if se_method else expert_delta_realization(policy)})
+                 "expert_delta_realization": None if (se_method or re_method) else expert_delta_realization(policy)})
             policy.train()
     train_s = time.time() - t_train
     last_val = run_eval(step)
@@ -825,10 +1014,11 @@ def main() -> None:
     info = {"step": "e03_secpo_train", "method": args.method, "optimizer_steps": step, "load_seconds": round(load_s, 1),
             "ref_cache_seconds": round(ref_s, 1), "ref_cache_reused": reused, "train_seconds": round(train_s, 1),
             "total_seconds": round(time.time() - t0, 1), **gpu_mem(device),
-            "expert_delta_realization": None if se_method else expert_delta_realization(policy),
+            "expert_delta_realization": None if (se_method or re_method) else expert_delta_realization(policy),
             "val_step0": first_val, "val_final": last_val,
             "trainable_params": rep["trainable"], "trainable_pct": rep["trainable_pct"],
             **({"se_alpha_final": SE.alphas(policy), "security_expert_sha256": sha} if se_method else {}),
+            **({"routed_expert_sha256": sha, "calibration": calib} if re_method else {}),
             "adapter_dir": str(out / save_name), "config": "config.json"}
     (out / "run_info.json").write_text(json.dumps(info, indent=1) + "\n")
     print(json.dumps({k: v for k, v in info.items() if k != "val_step0"}, indent=1))
