@@ -1,0 +1,24 @@
+{
+ "step": "e09_intervene",
+ "model": "routed",
+ "config": {
+  "name": "detect_L6_+8s",
+  "layer": 5,
+  "vector": "routed__detect__L6",
+  "norm": 0.1128,
+  "selection": "rule"
+ },
+ "checkpoint_sha256": "b7ef759b7c6a92f1a447301dd8238339018704911f80752ef8e4486dac3bbadb",
+ "vectors_sha256": "04d4e9a5584cc620a6c32d59e170ede9369ca63505321f4137aa27b9ff748584",
+ "data_sha256": "97f341f3e857fca5368fc1e0074fc0ccff8683762bb80ee33728781b26e707d7",
+ "n_records": 42,
+ "n_generations": 294,
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "dtype": "float32",
+ "slots": 33,
+ "seconds": 100.2,
+ "gpu": "NVIDIA A40",
+ "peak_gpu_gb": 41.52,
+ "generations_sha256": "1b2755b4a97b44fc0fd0d02e1fd29b840d14478b42b7f6d3887855ac270eccb9"
+}

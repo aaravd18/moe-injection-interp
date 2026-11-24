@@ -1,0 +1,556 @@
+{
+ "plan": {
+  "base": {
+   "resid_index": 14,
+   "hook_decoder_layer": 13,
+   "val_auroc": 0.8324,
+   "test_auroc": 0.8569,
+   "sigma": 0.3453,
+   "mean_resid_norm_last_token": 4.51,
+   "cos_obey_detect": 0.2304,
+   "cos_obey_rand1": -0.0414,
+   "configs": [
+    "control",
+    "obey_L14_-8s",
+    "obey_L14_-4s",
+    "obey_L14_-2s",
+    "obey_L14_+4s",
+    "detect_L14_-8s",
+    "detect_L14_-4s",
+    "detect_L14_+4s",
+    "rand1_L14_+8s",
+    "rand1_L14_+4s",
+    "rand2_L14_+8s"
+   ]
+  },
+  "routed": {
+   "resid_index": 6,
+   "hook_decoder_layer": 5,
+   "val_auroc": 0.7411,
+   "test_auroc": 0.7202,
+   "sigma": 0.0141,
+   "mean_resid_norm_last_token": 0.46,
+   "cos_obey_detect": 0.0574,
+   "cos_obey_rand1": 0.0018,
+   "configs": [
+    "control",
+    "obey_L6_+4s",
+    "obey_L6_+8s",
+    "detect_L6_+8s",
+    "rand1_L6_+8s"
+   ]
+  }
+ },
+ "models": {
+  "base": [
+   {
+    "name": "control",
+    "kind": "control",
+    "norm": 0.0,
+    "selection": "control",
+    "strength_sigma": 0.0,
+    "delta_over_resid_norm": 0.0,
+    "n_records": 42,
+    "obeyed": 0.4881,
+    "begins": 0.3135,
+    "task_injected": 0.4881,
+    "task_clean": 0.8571,
+    "degenerate": 0.0034,
+    "ci": {
+     "obeyed": [
+      0.4087,
+      0.5675
+     ],
+     "task_injected": [
+      0.4048,
+      0.5714
+     ],
+     "task_clean": [
+      0.7381,
+      0.9524
+     ]
+    }
+   },
+   {
+    "name": "detect_L14_-4s",
+    "kind": "detect",
+    "norm": -1.3812,
+    "selection": "exploratory",
+    "strength_sigma": -4.0,
+    "delta_over_resid_norm": 0.306,
+    "n_records": 42,
+    "obeyed": 0.3214,
+    "begins": 0.1627,
+    "task_injected": 0.5516,
+    "task_clean": 0.8095,
+    "degenerate": 0.0034,
+    "ci": {
+     "obeyed": [
+      0.25,
+      0.4008
+     ],
+     "task_injected": [
+      0.4563,
+      0.6429
+     ],
+     "task_clean": [
+      0.6667,
+      0.9286
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 12,
+      "control_only": 54,
+      "p": 0.0
+     },
+     "task_injected": {
+      "a_only": 34,
+      "control_only": 18,
+      "p": 0.0365
+     },
+     "task_clean": {
+      "a_only": 0,
+      "control_only": 2,
+      "p": 0.5
+     }
+    }
+   },
+   {
+    "name": "detect_L14_-2s",
+    "kind": "detect",
+    "norm": -0.6906,
+    "selection": "rule",
+    "strength_sigma": -2.0,
+    "delta_over_resid_norm": 0.153,
+    "n_records": 42,
+    "obeyed": 0.3929,
+    "begins": 0.2183,
+    "task_injected": 0.5198,
+    "task_clean": 0.8571,
+    "degenerate": 0.0,
+    "ci": {
+     "obeyed": [
+      0.3095,
+      0.4802
+     ],
+     "task_injected": [
+      0.4285,
+      0.6071
+     ],
+     "task_clean": [
+      0.7381,
+      0.9524
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 13,
+      "control_only": 37,
+      "p": 0.0009
+     },
+     "task_injected": {
+      "a_only": 23,
+      "control_only": 15,
+      "p": 0.2559
+     },
+     "task_clean": {
+      "a_only": 1,
+      "control_only": 1,
+      "p": 1.0
+     }
+    }
+   },
+   {
+    "name": "obey_L14_-8s",
+    "kind": "obey",
+    "norm": -2.7624,
+    "selection": "exploratory",
+    "strength_sigma": -8.0,
+    "delta_over_resid_norm": 0.613,
+    "n_records": 42,
+    "obeyed": 0.1111,
+    "begins": 0.004,
+    "task_injected": 0.4405,
+    "task_clean": 0.6905,
+    "degenerate": 0.0204,
+    "ci": {
+     "obeyed": [
+      0.0594,
+      0.1667
+     ],
+     "task_injected": [
+      0.3571,
+      0.5198
+     ],
+     "task_clean": [
+      0.5476,
+      0.8333
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 6,
+      "control_only": 101,
+      "p": 0.0
+     },
+     "task_injected": {
+      "a_only": 27,
+      "control_only": 39,
+      "p": 0.1753
+     },
+     "task_clean": {
+      "a_only": 0,
+      "control_only": 7,
+      "p": 0.0156
+     }
+    }
+   },
+   {
+    "name": "obey_L14_-2s",
+    "kind": "obey",
+    "norm": -0.6906,
+    "selection": "rule",
+    "strength_sigma": -2.0,
+    "delta_over_resid_norm": 0.153,
+    "n_records": 42,
+    "obeyed": 0.3413,
+    "begins": 0.1905,
+    "task_injected": 0.5516,
+    "task_clean": 0.8333,
+    "degenerate": 0.0,
+    "ci": {
+     "obeyed": [
+      0.2619,
+      0.4325
+     ],
+     "task_injected": [
+      0.4603,
+      0.6429
+     ],
+     "task_clean": [
+      0.7143,
+      0.9286
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 6,
+      "control_only": 43,
+      "p": 0.0
+     },
+     "task_injected": {
+      "a_only": 25,
+      "control_only": 9,
+      "p": 0.009
+     },
+     "task_clean": {
+      "a_only": 1,
+      "control_only": 2,
+      "p": 1.0
+     }
+    }
+   },
+   {
+    "name": "rand1_L14_+2s",
+    "kind": "rand1",
+    "norm": 0.6906,
+    "selection": "rule",
+    "strength_sigma": 2.0,
+    "delta_over_resid_norm": 0.153,
+    "n_records": 42,
+    "obeyed": 0.4603,
+    "begins": 0.2937,
+    "task_injected": 0.5119,
+    "task_clean": 0.8095,
+    "degenerate": 0.0034,
+    "ci": {
+     "obeyed": [
+      0.3769,
+      0.5397
+     ],
+     "task_injected": [
+      0.4246,
+      0.5952
+     ],
+     "task_clean": [
+      0.6905,
+      0.9286
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 9,
+      "control_only": 16,
+      "p": 0.2295
+     },
+     "task_injected": {
+      "a_only": 17,
+      "control_only": 11,
+      "p": 0.3449
+     },
+     "task_clean": {
+      "a_only": 1,
+      "control_only": 3,
+      "p": 0.625
+     }
+    }
+   },
+   {
+    "name": "rand1_L14_+4s",
+    "kind": "rand1",
+    "norm": 1.3812,
+    "selection": "exploratory",
+    "strength_sigma": 4.0,
+    "delta_over_resid_norm": 0.306,
+    "n_records": 42,
+    "obeyed": 0.4802,
+    "begins": 0.2698,
+    "task_injected": 0.5278,
+    "task_clean": 0.7857,
+    "degenerate": 0.0034,
+    "ci": {
+     "obeyed": [
+      0.3968,
+      0.5675
+     ],
+     "task_injected": [
+      0.4325,
+      0.619
+     ],
+     "task_clean": [
+      0.6429,
+      0.9048
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 23,
+      "control_only": 25,
+      "p": 0.8854
+     },
+     "task_injected": {
+      "a_only": 23,
+      "control_only": 13,
+      "p": 0.1325
+     },
+     "task_clean": {
+      "a_only": 0,
+      "control_only": 3,
+      "p": 0.25
+     }
+    }
+   },
+   {
+    "name": "rand1_L14_+8s",
+    "kind": "rand1",
+    "norm": 2.7624,
+    "selection": "exploratory",
+    "strength_sigma": 8.0,
+    "delta_over_resid_norm": 0.613,
+    "n_records": 42,
+    "obeyed": 0.4405,
+    "begins": 0.2143,
+    "task_injected": 0.504,
+    "task_clean": 0.7143,
+    "degenerate": 0.0204,
+    "ci": {
+     "obeyed": [
+      0.3492,
+      0.5318
+     ],
+     "task_injected": [
+      0.4086,
+      0.5992
+     ],
+     "task_clean": [
+      0.5714,
+      0.8333
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 20,
+      "control_only": 32,
+      "p": 0.1263
+     },
+     "task_injected": {
+      "a_only": 28,
+      "control_only": 24,
+      "p": 0.6778
+     },
+     "task_clean": {
+      "a_only": 0,
+      "control_only": 6,
+      "p": 0.0312
+     }
+    }
+   }
+  ],
+  "routed": [
+   {
+    "name": "control",
+    "kind": "control",
+    "norm": 0.0,
+    "selection": "control",
+    "strength_sigma": 0.0,
+    "delta_over_resid_norm": 0.0,
+    "n_records": 42,
+    "obeyed": 0.0238,
+    "begins": 0.0,
+    "task_injected": 0.6389,
+    "task_clean": 0.7381,
+    "degenerate": 0.0136,
+    "ci": {
+     "obeyed": [
+      0.004,
+      0.0476
+     ],
+     "task_injected": [
+      0.5278,
+      0.7381
+     ],
+     "task_clean": [
+      0.5952,
+      0.8571
+     ]
+    }
+   },
+   {
+    "name": "detect_L6_+8s",
+    "kind": "detect",
+    "norm": 0.1128,
+    "selection": "rule",
+    "strength_sigma": 8.0,
+    "delta_over_resid_norm": 0.245,
+    "n_records": 42,
+    "obeyed": 0.0079,
+    "begins": 0.0,
+    "task_injected": 0.5635,
+    "task_clean": 0.619,
+    "degenerate": 0.0068,
+    "ci": {
+     "obeyed": [
+      0.0,
+      0.0198
+     ],
+     "task_injected": [
+      0.4563,
+      0.6667
+     ],
+     "task_clean": [
+      0.4762,
+      0.7619
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 1,
+      "control_only": 5,
+      "p": 0.2188
+     },
+     "task_injected": {
+      "a_only": 14,
+      "control_only": 33,
+      "p": 0.0079
+     },
+     "task_clean": {
+      "a_only": 1,
+      "control_only": 6,
+      "p": 0.125
+     }
+    }
+   },
+   {
+    "name": "obey_L6_+8s",
+    "kind": "obey",
+    "norm": 0.1128,
+    "selection": "rule (tie at 0 obeyed; larger strength)",
+    "strength_sigma": 8.0,
+    "delta_over_resid_norm": 0.245,
+    "n_records": 42,
+    "obeyed": 0.0079,
+    "begins": 0.0,
+    "task_injected": 0.5992,
+    "task_clean": 0.7619,
+    "degenerate": 0.0,
+    "ci": {
+     "obeyed": [
+      0.0,
+      0.0198
+     ],
+     "task_injected": [
+      0.492,
+      0.6984
+     ],
+     "task_clean": [
+      0.619,
+      0.881
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 0,
+      "control_only": 4,
+      "p": 0.125
+     },
+     "task_injected": {
+      "a_only": 13,
+      "control_only": 23,
+      "p": 0.1325
+     },
+     "task_clean": {
+      "a_only": 2,
+      "control_only": 1,
+      "p": 1.0
+     }
+    }
+   },
+   {
+    "name": "rand1_L6_+8s",
+    "kind": "rand1",
+    "norm": 0.1128,
+    "selection": "rule",
+    "strength_sigma": 8.0,
+    "delta_over_resid_norm": 0.245,
+    "n_records": 42,
+    "obeyed": 0.0119,
+    "begins": 0.0,
+    "task_injected": 0.6508,
+    "task_clean": 0.7381,
+    "degenerate": 0.0238,
+    "ci": {
+     "obeyed": [
+      0.0,
+      0.0278
+     ],
+     "task_injected": [
+      0.5475,
+      0.754
+     ],
+     "task_clean": [
+      0.5952,
+      0.8571
+     ]
+    },
+    "vs_control": {
+     "obeyed": {
+      "a_only": 2,
+      "control_only": 5,
+      "p": 0.4531
+     },
+     "task_injected": {
+      "a_only": 23,
+      "control_only": 20,
+      "p": 0.7608
+     },
+     "task_clean": {
+      "a_only": 2,
+      "control_only": 2,
+      "p": 1.0
+     }
+    }
+   }
+  ]
+ }
+}

@@ -7,8 +7,14 @@ following prompt injections? Four checkpoints, no retraining:
 - **E05:** the always-on security expert `secpo_se_v1`.
 - **routed:** E08's routed security expert, main run, step 80 (copy init; not the §7 ablations).
 
-**Run:** on 2026-11-23; capture on a RunPod A40, probes on the laptop CPU. Outputs are in
-`outputs/e09_probing/`. Experiments 1 and 2 are complete; experiment 3 is in §4.
+**Run:** on 2026-11-23/24; capture and interventions on a RunPod A40, probes and judging on the laptop. Outputs
+are in `outputs/e09_probing/`. All three experiments are complete. Experiment 3 (§4) covers the base model and the
+routed model; LoRA and E05 were not intervened on.
+
+**Experiment 3 in one line:** in the base model, subtracting 2σ of the layer-14 obedience direction cuts attack
+success 0.49 → 0.34 on held-out test records, chosen on val in advance, with no utility cost. A random direction of
+the same norm does not (0.46). In the routed model, pushing along its own susceptibility direction does not bring
+attacks back. Details in §4.
 
 ## Result (experiments 1 and 2)
 
@@ -150,7 +156,7 @@ following prompt injections? Four checkpoints, no retraining:
   - Early cosines near 1 mean only that the first layers barely change.
 - **Detection vs susceptibility directions:** cos ≤ 0.23 in every model and layer.
 
-## 4. Experiment 3: causal interventions (in progress)
+## 4. Experiment 3: causal interventions
 
 **Setup, all chosen on train / val:** `e09_make_interventions.py` → `interventions/`.
 - **Layer:** the best val susceptibility layer, excluding index 0.
@@ -253,7 +259,67 @@ of the final-token residual norm):
 - **Exploratory additions to the test run, chosen after seeing val:** obedience −8σ and detection −4σ, with random
   direction 1 at 8σ and 4σ as their matched controls.
 
-*(test results to follow)*
+### 4.2 Test results (42 held-out records; 252 injected and 42 clean rows per config)
+
+`intervene_test/summary.md`, `fig_tradeoff.png`. Both controls reproduce the saved E07/E08 responses on 294 / 294
+test prompts.
+
+**Base, pre-registered settings (2σ, chosen on val by the rule):**
+
+| config | obeyed [CI] | task under injection [CI] | clean task | obeyed vs control | task under inj. vs control | clean vs control |
+|---|---|---|--:|---|---|---|
+| control | 0.49 [0.41, 0.57] | 0.49 [0.40, 0.57] | 0.86 | – | – | – |
+| **obedience −2σ** | **0.34** [0.26, 0.43] | **0.55** [0.46, 0.64] | 0.83 | **6 v 43, p < 0.001** | **25 v 9, p = 0.009** | 1 v 2, p = 1.0 |
+| detection −2σ | 0.39 [0.31, 0.48] | 0.52 | 0.86 | 13 v 37, p < 0.001 | 23 v 15, p = 0.26 | 1 v 1 |
+| random 1, 2σ | 0.46 [0.38, 0.54] | 0.51 | 0.81 | 9 v 16, p = 0.23 | 17 v 11, p = 0.34 | 1 v 3, p = 0.63 |
+
+**Base, exploratory settings (chosen after seeing val):**
+
+| config | obeyed | task under injection | clean task | obeyed vs control | task under inj. | clean vs control |
+|---|--:|--:|--:|---|---|---|
+| obedience −8σ | **0.11** | 0.44 | 0.69 | 6 v 101, p < 0.001 | 27 v 39, p = 0.18 | 0 v 7, p = 0.016 |
+| random 1, 8σ | 0.44 | 0.50 | 0.71 | 20 v 32, p = 0.13 | 28 v 24, p = 0.68 | 0 v 6, p = 0.031 |
+| detection −4σ | 0.32 | **0.55** | 0.81 | 12 v 54, p < 0.001 | **34 v 18, p = 0.037** | 0 v 2, p = 0.50 |
+| random 1, 4σ | 0.48 | 0.53 | 0.79 | 23 v 25, p = 0.89 | 23 v 13, p = 0.13 | 0 v 3, p = 0.25 |
+
+**Routed (E08), pre-registered (+8σ at layer 5):**
+
+| config | obeyed | task under injection | clean task | obeyed vs control | task under inj. vs control |
+|---|--:|--:|--:|---|---|
+| control | 6 / 252 (0.024) | 0.64 | 0.74 | – | – |
+| obedience +8σ | 2 / 252 | 0.60 | 0.76 | 0 v 4, p = 0.13 | 13 v 23, p = 0.13 |
+| detection +8σ | 2 / 252 | 0.56 | 0.62 | 1 v 5, p = 0.22 | 14 v 33, p = 0.008 |
+| random 1, +8σ | 3 / 252 | 0.65 | 0.74 | 2 v 5, p = 0.45 | 23 v 20, p = 0.76 |
+
+**What the test run confirms:**
+- **The pre-registered base result replicates.**
+  - Subtracting 2σ of the obedience direction cuts attack success 0.49 → 0.34. The random direction at the same norm
+    does not (0.46, p = 0.23).
+  - On test it even *raises* the user's task under injection (0.49 → 0.55, p = 0.009), with no clean cost (0.86 →
+    0.83, p = 1.0).
+  - The detection direction at the same norm also lowers attack success (0.39), but less.
+- **The val trade-off pattern replicates (exploratory).**
+  - −8σ obedience nearly removes attacks (0.11) but costs clean utility (0.86 → 0.69, p = 0.016). Random 8σ costs the
+    same (0.71, p = 0.031), so the cost comes from the push's size.
+  - −4σ detection again improves both axes (0.32 obeyed; 0.55 task under injection, p = 0.037).
+- **The routed model stays unaffected.** Pushing along its own susceptibility direction does not bring attacks back
+  (2 / 252 against the control's 6). The detection push costs utility (task under injection 0.56, p = 0.008).
+
+### 4.3 Analysis of experiment 3
+
+- **In the base model, the late-layer obedience direction is causal and specific.** It moves attack success in both
+  signs and in proportion to strength. It does so on held-out test records at a strength chosen in advance, and a
+  random direction of the same norm does not. So the probe found more than a correlate of the attack type.
+- **Small pushes are close to free; large pushes cost utility whatever the direction.** At 2σ (15% of the final-token
+  residual norm) neither clean utility nor the task under injection gets worse. At 8σ (61%) random directions
+  cost as much as the probe directions.
+- **The detection direction is a different and more task-preserving lever.** Subtracting "injection present" leaves
+  attacks somewhat less successful and the user's task *more* often done, both on val and on test. One reading: the
+  model attends less to the injected instruction as an instruction. This is a hypothesis; it was not tested.
+- **The security-trained routed model has no such handle.** Its weak, mid-network susceptibility direction does not
+  restore attacks at 8σ. This matches experiment 1: post-training removes the late-layer representation the base
+  model uses, and what is left is not what drives behaviour, at least along these directions and strengths.
+  Untested: larger strengths, other layers, and transplanting the base model's layer-14 direction.
 
 ## 5. Caveats
 
@@ -266,6 +332,17 @@ of the final-token residual norm):
 - **Linear probes only:** "not linearly decodable" does not mean "absent".
 - **Detection is easy for a superficial reason:** injected prompts differ in their text. Near-perfect AUROC therefore
   says little; the informative parts are the transfer and the late-layer rotation.
+- **Experiment 3 scope:**
+  - one layer per model, one hook position (every token), a handful of strengths;
+  - 41 val and 42 test records, so single-config effects of about 0.05 are not resolved;
+  - LoRA and E05 were not intervened on;
+  - the exploratory −8σ / −4σ test rows were chosen after seeing val;
+  - the extra random controls (random 3–6 at 8σ, random 1 at −8σ) were added after the first val results, to measure
+    the null.
+- **Strength unit:** σ is measured at the final prompt token, but the vector is added at every position. Positions
+  differ in norm, so "% of residual norm" is only indicative.
+- **Judging:** the E07 judges, with no human check of the intervened outputs. The degenerate share stays ≤ 6.6% in
+  every config.
 
 ## 6. Reproduce
 
@@ -279,6 +356,14 @@ python experiments/modal/experiments/e09_make_interventions.py --probes experime
   --acts experiments/modal/outputs/e09_probing/acts --out experiments/modal/outputs/e09_probing/interventions
 INTERV=experiments/modal/outputs/e09_probing/interventions bash experiments/modal/experiments/e09_local.sh intervene-sync
 PART=val bash experiments/modal/experiments/e09_local.sh intervene-start
+# extra random controls (val) and the test run: same commands with
+#   INTERV=experiments/modal/outputs/e09_probing/interventions_valx MODELS=base PART=val
+#   INTERV=experiments/modal/outputs/e09_probing/interventions_test PART=test
+# judge each config dir with the E07 judges (e07_judge_decisions.py / e07_judge_strict.py --out DIR --models NAME), then
+python experiments/modal/experiments/e09_intervention_summary.py --dir experiments/modal/outputs/e09_probing/intervene_val \
+  --interv experiments/modal/outputs/e09_probing/interventions
+python experiments/modal/experiments/e09_intervention_summary.py --dir experiments/modal/outputs/e09_probing/intervene_test \
+  --interv experiments/modal/outputs/e09_probing/interventions_test
 ```
 
 Environment: torch 2.14.1+cu130, transformers 5.22.1, peft 0.21.3, NVIDIA A40; laptop scikit-learn 1.9.1.
