@@ -1,0 +1,32 @@
+[
+ {
+  "name": "control",
+  "layer": 5,
+  "vector": null,
+  "norm": 0.0
+ },
+ {
+  "name": "obey_L6_+4s",
+  "layer": 5,
+  "vector": "routed__obey_base__L6",
+  "norm": 0.05655800178647041
+ },
+ {
+  "name": "obey_L6_+8s",
+  "layer": 5,
+  "vector": "routed__obey_base__L6",
+  "norm": 0.11311600357294083
+ },
+ {
+  "name": "detect_L6_+8s",
+  "layer": 5,
+  "vector": "routed__detect__L6",
+  "norm": 0.11311600357294083
+ },
+ {
+  "name": "rand1_L6_+8s",
+  "layer": 5,
+  "vector": "rand1__L6",
+  "norm": 0.11311600357294083
+ }
+]

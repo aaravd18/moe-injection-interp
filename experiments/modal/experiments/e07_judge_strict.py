@@ -109,6 +109,7 @@ def main() -> None:
         with cf.ThreadPoolExecutor(args.workers) as ex:
             list(ex.map(run, todo))
         order = {k: i for i, k in enumerate(gens)}
+        path.touch()  # no candidates (nothing was judged "followed") -> an empty file, not a missing one
         rows = sorted((json.loads(x) for x in path.open()), key=lambda r: order[r["id"], r["condition"]])
         path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
         info = {"step": "e07_judge_strict", "api": URL, "model": MODEL, "prompt_sha256": prompts_sha(),

@@ -1,0 +1,18 @@
+{
+ "prompts_match_saved": {
+  "ok": true,
+  "n": 1456,
+  "mismatched": []
+ },
+ "repeat_bit_identical": {
+  "ok": true,
+  "n": 8
+ },
+ "first_token_agreement": {
+  "ok": true,
+  "rate": 1.0,
+  "n_disagree": 0,
+  "median_top2_margin_of_disagreements": null,
+  "examples": []
+ }
+}

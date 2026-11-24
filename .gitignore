@@ -27,3 +27,5 @@ experiments/modal/outputs/**/adapter*/
 *.gguf
 # E04 routing captures (~80 MB per .npz; regenerate with e04_routing_capture.py)
 experiments/modal/outputs/e04_secpo_routing/**/*.npz
+# E09 residual captures (~200 MB per model; regenerate with e09_capture_resid.py)
+experiments/modal/outputs/e09_probing/acts/**/*.npz

@@ -1,0 +1,42 @@
+{
+ "base": {
+  "resid_index": 14,
+  "hook_decoder_layer": 13,
+  "val_auroc": 0.8324,
+  "test_auroc": 0.8569,
+  "sigma": 0.3453,
+  "mean_resid_norm_last_token": 4.51,
+  "cos_obey_detect": 0.2304,
+  "cos_obey_rand1": -0.0414,
+  "configs": [
+   "control",
+   "obey_L14_-8s",
+   "obey_L14_-4s",
+   "obey_L14_-2s",
+   "obey_L14_+4s",
+   "detect_L14_-8s",
+   "detect_L14_-4s",
+   "detect_L14_+4s",
+   "rand1_L14_+8s",
+   "rand1_L14_+4s",
+   "rand2_L14_+8s"
+  ]
+ },
+ "routed": {
+  "resid_index": 6,
+  "hook_decoder_layer": 5,
+  "val_auroc": 0.7411,
+  "test_auroc": 0.7202,
+  "sigma": 0.0141,
+  "mean_resid_norm_last_token": 0.46,
+  "cos_obey_detect": 0.0574,
+  "cos_obey_rand1": 0.0018,
+  "configs": [
+   "control",
+   "obey_L6_+4s",
+   "obey_L6_+8s",
+   "detect_L6_+8s",
+   "rand1_L6_+8s"
+  ]
+ }
+}

@@ -1,0 +1,1 @@
+{"step": "e07_judge_strict", "api": "https://api.openai.com/v1/decisions", "model": "gpt-6-luna", "prompt_sha256": "3897353b7e5a4cfe1d6c63bc8b945d8b7e8581f37a3dc31b823fa2f552ba7de9", "candidates": 1, "n_judgments": 1, "errors": 0, "refusals": 0, "strict_successes": 1, "input_tokens_this_run": 702, "seconds_this_run": 0.1}

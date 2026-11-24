@@ -1,0 +1,32 @@
+[
+ {
+  "name": "rand3_L14_+8s",
+  "layer": 13,
+  "vector": "rand3__L14",
+  "norm": 2.7624
+ },
+ {
+  "name": "rand4_L14_+8s",
+  "layer": 13,
+  "vector": "rand4__L14",
+  "norm": 2.7624
+ },
+ {
+  "name": "rand5_L14_+8s",
+  "layer": 13,
+  "vector": "rand5__L14",
+  "norm": 2.7624
+ },
+ {
+  "name": "rand6_L14_+8s",
+  "layer": 13,
+  "vector": "rand6__L14",
+  "norm": 2.7624
+ },
+ {
+  "name": "rand1_L14_-8s",
+  "layer": 13,
+  "vector": "rand1__L14",
+  "norm": -2.7624
+ }
+]

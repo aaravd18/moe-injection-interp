@@ -1,0 +1,14 @@
+{
+  "step": "e07_judge_decisions",
+  "api": "https://api.openai.com/v1/decisions",
+  "model": "gpt-6-luna",
+  "prompts_sha256": "4285333e1d8ead712c6031b4c8e224712814df2d797508bb396d84c245607983",
+  "decision_rule": "predicates: P >= 0.5; choice: the API's choice",
+  "n_judgments": 287,
+  "n_expected": 287,
+  "errors": 0,
+  "refusals": 0,
+  "error_messages": [],
+  "input_tokens_this_run": 354568,
+  "seconds_this_run": 3.8
+}

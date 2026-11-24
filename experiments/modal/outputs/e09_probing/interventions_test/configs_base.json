@@ -1,0 +1,58 @@
+[
+ {
+  "name": "control",
+  "layer": 13,
+  "vector": null,
+  "norm": 0.0,
+  "selection": "control"
+ },
+ {
+  "name": "obey_L14_-2s",
+  "layer": 13,
+  "vector": "base__obey_base__L14",
+  "norm": -0.6906,
+  "selection": "rule"
+ },
+ {
+  "name": "detect_L14_-2s",
+  "layer": 13,
+  "vector": "base__detect__L14",
+  "norm": -0.6906,
+  "selection": "rule"
+ },
+ {
+  "name": "rand1_L14_+2s",
+  "layer": 13,
+  "vector": "rand1__L14",
+  "norm": 0.6906,
+  "selection": "rule"
+ },
+ {
+  "name": "obey_L14_-8s",
+  "layer": 13,
+  "vector": "base__obey_base__L14",
+  "norm": -2.7624,
+  "selection": "exploratory"
+ },
+ {
+  "name": "detect_L14_-4s",
+  "layer": 13,
+  "vector": "base__detect__L14",
+  "norm": -1.3812,
+  "selection": "exploratory"
+ },
+ {
+  "name": "rand1_L14_+8s",
+  "layer": 13,
+  "vector": "rand1__L14",
+  "norm": 2.7624,
+  "selection": "exploratory"
+ },
+ {
+  "name": "rand1_L14_+4s",
+  "layer": 13,
+  "vector": "rand1__L14",
+  "norm": 1.3812,
+  "selection": "exploratory"
+ }
+]

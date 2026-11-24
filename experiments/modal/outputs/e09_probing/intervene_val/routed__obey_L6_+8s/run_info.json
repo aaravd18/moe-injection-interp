@@ -1,0 +1,23 @@
+{
+ "step": "e09_intervene",
+ "model": "routed",
+ "config": {
+  "name": "obey_L6_+8s",
+  "layer": 5,
+  "vector": "routed__obey_base__L6",
+  "norm": 0.11311600357294083
+ },
+ "checkpoint_sha256": "b7ef759b7c6a92f1a447301dd8238339018704911f80752ef8e4486dac3bbadb",
+ "vectors_sha256": "2def9ac99f3038cd1eaffdaaa702c9db86b5518508dc21dea82c1a44ae4f67e9",
+ "data_sha256": "97f341f3e857fca5368fc1e0074fc0ccff8683762bb80ee33728781b26e707d7",
+ "n_records": 41,
+ "n_generations": 287,
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "dtype": "float32",
+ "slots": 41,
+ "seconds": 89.1,
+ "gpu": "NVIDIA A40",
+ "peak_gpu_gb": 41.58,
+ "generations_sha256": "c74f4a0683e0ec51a88438adee4c419c2d99c403e779436cc6648a7a68e61510"
+}

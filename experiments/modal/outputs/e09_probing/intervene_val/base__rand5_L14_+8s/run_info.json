@@ -1,0 +1,23 @@
+{
+ "step": "e09_intervene",
+ "model": "base",
+ "config": {
+  "name": "rand5_L14_+8s",
+  "layer": 13,
+  "vector": "rand5__L14",
+  "norm": 2.7624
+ },
+ "checkpoint_sha256": null,
+ "vectors_sha256": "04d4e9a5584cc620a6c32d59e170ede9369ca63505321f4137aa27b9ff748584",
+ "data_sha256": "97f341f3e857fca5368fc1e0074fc0ccff8683762bb80ee33728781b26e707d7",
+ "n_records": 41,
+ "n_generations": 287,
+ "max_new_tokens": 512,
+ "do_sample": false,
+ "dtype": "float32",
+ "slots": 41,
+ "seconds": 100.0,
+ "gpu": "NVIDIA A40",
+ "peak_gpu_gb": 41.17,
+ "generations_sha256": "7259d2ae1a25fe5fe44de6ce05f7037cbb124c2443c11c1da7a2671fcbb48945"
+}
