@@ -187,3 +187,54 @@ def test_attaching_twice_is_refused(toy_tokenizer):
     _attach(lm)
     with pytest.raises(ValueError):
         _attach(lm)
+
+
+@pytest.mark.parametrize("fold", [False, True])
+def test_init_from_a_saved_security_expert(toy_tokenizer, tmp_path, fold):
+    """E08 ablation: the new expert starts as E05's security expert (optionally times alpha); the row is still row j."""
+    from moe_interp import security_expert as SE
+
+    donor = make_tiny_loaded(toy_tokenizer)
+    ses = SE.add_security_experts(donor.model, donor.layout, alpha_init=0.1, seed=3)
+    with torch.no_grad():
+        for i, se in enumerate(ses):
+            se.down_proj.normal_(std=0.02)
+            se.alpha.fill_(0.1 + 0.01 * i)
+    SE.save_security_experts(donor.model, tmp_path / "se")
+
+    init, info = RE.security_expert_init(tmp_path / "se", fold_alpha=fold)
+    assert info["fold_alpha"] is fold and len(info["sha256"]) == 64 and len(init) == len(ses)
+    lm = make_tiny_loaded(toy_tokenizer)
+    src = [l % lm.layout.num_experts for l in range(lm.layout.num_layers)]
+    RE.add_routed_experts(lm.model, lm.layout, src, row_noise_std=1e-3, init_expert=init)
+    for b, j, se in zip(RE.blocks(lm.model), src, ses):
+        assert torch.equal(b.re_gate_up, se.gate_up_proj)
+        assert torch.equal(b.re_down, se.down_proj * se.alpha if fold else se.down_proj)
+        assert not torch.equal(b.re_row[0], b.gate.weight[j])  # copy + noise
+        assert ((b.re_row[0] - b.gate.weight[j]).norm() / b.gate.weight[j].norm()) < 1e-2
+        assert b.re_gate_up.requires_grad and b.re_down.requires_grad and b.re_row.requires_grad
+    rep = RE.param_report(lm.model)
+    assert not rep["non_routed_expert_trainable"] and not rep["original_router_trainable"]
+
+    # the module computes exactly the 65-expert MoE with the donor weights, and the checkpoint reloads exactly
+    RE.calibrate_bias(lm.model, _batches(), 0.3)
+    x = torch.randn(1, 21, lm.model.config.hidden_size)
+    for b in RE.blocks(lm.model):
+        torch.testing.assert_close(b(x)[0], _naive_block(b, x[0]), rtol=1e-5, atol=1e-6)
+    ids, att = _batches(1, seed=9)[0]
+    with torch.no_grad():
+        want = lm.model(input_ids=ids, attention_mask=att).logits
+    RE.save_routed_experts(lm.model, tmp_path / "re", {"expert_init": info})
+    fresh = make_tiny_loaded(toy_tokenizer)
+    cfg = RE.load_routed_experts(fresh.model, fresh.layout, tmp_path / "re")
+    with torch.no_grad():
+        assert torch.equal(fresh.model(input_ids=ids, attention_mask=att).logits, want)
+    assert cfg["expert_init"]["fold_alpha"] is fold
+
+
+def test_init_expert_shape_is_checked(toy_tokenizer):
+    lm = make_tiny_loaded(toy_tokenizer)
+    H, I, L = lm.model.config.hidden_size, lm.model.config.intermediate_size, lm.layout.num_layers
+    bad = [(torch.zeros(2 * I, H), torch.zeros(H, I + 1))] * L
+    with pytest.raises(ValueError):
+        RE.add_routed_experts(lm.model, lm.layout, [0] * L, init_expert=bad)

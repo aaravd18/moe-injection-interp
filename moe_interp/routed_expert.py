@@ -7,9 +7,10 @@ Every MoE layer gets a 65th expert that competes for the usual top-k slots:
     h(x)      = sum over the 8 selected e of p_e * E_e(x),  E_64 = the new expert
 
 - Init: the new expert is a copy of pretrained expert j (`copy_from[l]`, by default the expert this layer routes most
-  tokens to), and w_new is a copy of router row j. b is a fixed per-layer scalar chosen so that the new expert is
-  selected for a target share of tokens on calibration data (`calibrate_bias`). Without it the copy ties with
-  expert j and would be selected wherever j is.
+  tokens to), and w_new is a copy of router row j. Alternatively (`init_expert`, E08 ablation) the new expert's weights
+  come from elsewhere, e.g. E05's always-active security expert (`security_expert_init`); the row is still row j.
+  b is a fixed per-layer scalar chosen so that the new expert is selected for a target share of tokens on
+  calibration data (`calibrate_bias`). Without it the copied row ties with row j and would be selected wherever j is.
 - Trainable: w_new and the new expert's weights (`gate_up_proj`, `down_proj`). Everything else is frozen, including
   the 64 original router rows and experts and b. (`train_expert=False` freezes the new expert too; loading for
   inference uses it.)
@@ -119,13 +120,17 @@ def routing_frequency(model: nn.Module, layout, batches) -> list[torch.Tensor]:
 
 
 def add_routed_experts(model: nn.Module, layout, copy_from: list[int], train_expert: bool = True,
-                       row_noise_std: float = 0.0, seed: int = 0) -> None:
+                       row_noise_std: float = 0.0, seed: int = 0,
+                       init_expert: list[tuple[torch.Tensor, torch.Tensor]] | None = None) -> None:
     """Attach the 65th expert and router row to every MoE block (bias 0 until `calibrate_bias`). Freezes everything
-    else. `copy_from[l]` = the pretrained expert (and router row) copied in layer l."""
+    else. `copy_from[l]` = the pretrained router row copied in layer l, and the pretrained expert copied too unless
+    `init_expert[l]` = (gate_up_proj [2I, H], down_proj [H, I]) gives the new expert's initial weights instead."""
     if blocks(model):
         raise ValueError("model already has routed experts")
     if len(copy_from) != len(layout.moe_blocks):
         raise ValueError("copy_from needs one expert id per MoE layer")
+    if init_expert is not None and len(init_expert) != len(layout.moe_blocks):
+        raise ValueError("init_expert needs one (gate_up_proj, down_proj) per MoE layer")
     for p in model.parameters():
         p.requires_grad_(False)
     g = torch.Generator(device="cpu").manual_seed(seed)
@@ -136,12 +141,35 @@ def add_routed_experts(model: nn.Module, layout, copy_from: list[int], train_exp
             row += (torch.randn(row.shape, generator=g) * row_noise_std * row.float().pow(2).mean().sqrt().item()
                     ).to(row.device, row.dtype)
         block.re_row = nn.Parameter(row)
-        block.re_gate_up = nn.Parameter(ex.gate_up_proj[j].detach().clone(), requires_grad=train_expert)
-        block.re_down = nn.Parameter(ex.down_proj[j].detach().clone(), requires_grad=train_expert)
+        gu, dn = (ex.gate_up_proj[j], ex.down_proj[j]) if init_expert is None else init_expert[i]
+        if gu.shape != ex.gate_up_proj[j].shape or dn.shape != ex.down_proj[j].shape:
+            raise ValueError(f"layer {i}: init_expert shapes {tuple(gu.shape)}, {tuple(dn.shape)} do not match an expert")
+        kw = {"device": ex.gate_up_proj.device, "dtype": ex.gate_up_proj.dtype}
+        block.re_gate_up = nn.Parameter(gu.detach().to(**kw).clone(), requires_grad=train_expert)
+        block.re_down = nn.Parameter(dn.detach().to(**kw).clone(), requires_grad=train_expert)
         block.register_buffer("re_bias", torch.zeros((), dtype=w.dtype, device=w.device))
         block.re_enabled, block.re_layer, block.re_copy = True, i, int(j)
         block.re_recorder = block.re_capture = None
         block.__class__ = _routed_class(type(block))
+
+
+def security_expert_init(path, fold_alpha: bool) -> tuple[list[tuple[torch.Tensor, torch.Tensor]], dict]:
+    """Per-layer (gate_up_proj, down_proj) of a saved E05 security expert (moe_interp.security_expert), as initial
+    weights for the routed expert. E05 adds alpha_l * S_l(x); with fold_alpha the routed expert starts as alpha_l * S_l
+    (down_proj scaled by alpha_l), otherwise as S_l itself and the routing weight takes alpha's place."""
+    from safetensors.torch import load_file
+
+    from moe_interp import security_expert as SE
+
+    path = Path(path)
+    state = load_file(str(path / SE.WEIGHTS))
+    n = json.loads((path / SE.CONFIG).read_text())["n_layers"]
+    alpha = [state[f"layers.{i}.alpha"].item() for i in range(n)]
+    out = [(state[f"layers.{i}.gate_up_proj"],
+            state[f"layers.{i}.down_proj"] * (state[f"layers.{i}.alpha"] if fold_alpha else 1)) for i in range(n)]
+    info = {"source": str(path), "sha256": hashlib.sha256((path / SE.WEIGHTS).read_bytes()).hexdigest(),
+            "fold_alpha": fold_alpha, "alpha": [round(a, 6) for a in alpha]}
+    return out, info
 
 
 @torch.no_grad()

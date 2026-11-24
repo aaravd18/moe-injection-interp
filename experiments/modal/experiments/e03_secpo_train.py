@@ -560,7 +560,7 @@ def smoke_security_expert(model, layout, train, cache, args, pad_id, device, aut
 
 
 def smoke_routed_expert(model, layout, train, cache, args, pad_id, device, autocast, rep: dict, pre: dict,
-                        out: Path, calib: dict) -> dict:
+                        out: Path, calib: dict, init_expert=None) -> dict:
     """E08 checks on one batch: trainable set, copy init, exact base when disabled, reference, calibrated rates,
     gradients only on the new row (+ expert), frozen weights bit-identical after two updates, loss decreases, reload."""
     import torch
@@ -586,10 +586,17 @@ def smoke_routed_expert(model, layout, train, cache, args, pad_id, device, autoc
           all(not b.gate.weight.requires_grad and not b.experts.gate_up_proj.requires_grad
               and not b.experts.down_proj.requires_grad for b in bs))
     rel = max(((b.re_row[0] - b.gate.weight[b.re_copy]).norm() / b.gate.weight[b.re_copy].norm()).item() for b in bs)
-    check("new_expert_is_exact_copy_and_row_is_copy_plus_small_noise",
-          all(torch.equal(b.re_gate_up, b.experts.gate_up_proj[b.re_copy])
-              and torch.equal(b.re_down, b.experts.down_proj[b.re_copy]) for b in bs) and rel < 10 * args.re_row_noise + 1e-12,
-          copy_from=[b.re_copy for b in bs], max_row_rel_diff=rel)
+    if init_expert is None:
+        check("new_expert_is_exact_copy_and_row_is_copy_plus_small_noise",
+              all(torch.equal(b.re_gate_up, b.experts.gate_up_proj[b.re_copy])
+                  and torch.equal(b.re_down, b.experts.down_proj[b.re_copy]) for b in bs)
+              and rel < 10 * args.re_row_noise + 1e-12, copy_from=[b.re_copy for b in bs], max_row_rel_diff=rel)
+    else:
+        check("new_expert_equals_given_init_and_row_is_copy_plus_small_noise",
+              all(torch.equal(b.re_gate_up, gu.to(b.re_gate_up)) and torch.equal(b.re_down, dn.to(b.re_down))
+                  for b, (gu, dn) in zip(bs, init_expert))
+              and rel < 10 * args.re_row_noise + 1e-12, expert_init=args.re_expert_init,
+              fold_alpha=args.re_fold_alpha, row_copied_from=[b.re_copy for b in bs], max_row_rel_diff=rel)
     check("calibrated_rate_on_calibration_tokens", all(abs(r - args.re_target_rate) < 0.01 for r in calib["rate_by_layer"]),
           target=args.re_target_rate, rates=[round(r, 4) for r in calib["rate_by_layer"]])
 
@@ -724,9 +731,19 @@ def main() -> None:
                     help="routed_expert: Gaussian noise on the copied router row, relative to its RMS (breaks ties)")
     ap.add_argument("--re-calib-pairs", type=int, default=128,
                     help="routed_expert: train pairs (policy prompt + chosen and + rejected) used for calibration")
+    ap.add_argument("--re-expert-init", default="copy",
+                    help="routed_expert: 'copy' (the new expert is a copy of the expert whose router row is copied) or "
+                         "'security_expert:DIR' (a saved E05 security expert's gate_up_proj / down_proj; the router "
+                         "row is still copied per --re-copy)")
+    ap.add_argument("--re-fold-alpha", action="store_true",
+                    help="routed_expert with --re-expert-init security_expert:DIR: scale down_proj by E05's alpha_l")
     args = ap.parse_args()
     se_method = args.method == "security_expert"
     re_method = args.method == "routed_expert"
+    if args.re_expert_init != "copy" and not args.re_expert_init.startswith("security_expert:"):
+        raise SystemExit("--re-expert-init must be 'copy' or 'security_expert:DIR'")
+    if args.re_fold_alpha and args.re_expert_init == "copy":
+        raise SystemExit("--re-fold-alpha needs --re-expert-init security_expert:DIR")
 
     import torch
     import transformers
@@ -801,7 +818,7 @@ def main() -> None:
             rc_, rr_, _ = pair_logps(lm.model, b, "ref_prompt", args.max_len, pad_id, device, autocast)
             bc_, br_, _ = pair_logps(lm.model, b, "policy_prompt", args.max_len, pad_id, device, autocast)
         pre = {"rc": rc_, "rr": rr_, "bc": bc_, "br": br_}
-    calib = None
+    calib = init_expert = init_info = None
     if re_method:
         from moe_interp import routed_expert as RE
 
@@ -814,7 +831,11 @@ def main() -> None:
             freq = RE.routing_frequency(lm.model, lm.layout, cal_batches)
         copy_from = ([int(f.argmax()) for f in freq] if args.re_copy == "most_used"
                      else [int(x) for x in args.re_copy.split(",")])
-        RE.add_routed_experts(lm.model, lm.layout, copy_from, row_noise_std=args.re_row_noise, seed=args.seed)
+        if args.re_expert_init != "copy":
+            init_expert, init_info = RE.security_expert_init(args.re_expert_init.split(":", 1)[1], args.re_fold_alpha)
+            print(f"[routed_expert] expert init {json.dumps(init_info)}", flush=True)
+        RE.add_routed_experts(lm.model, lm.layout, copy_from, row_noise_std=args.re_row_noise, seed=args.seed,
+                              init_expert=init_expert)
         with autocast():
             bias = RE.calibrate_bias(lm.model, cal_batches, args.re_target_rate)
         with torch.no_grad(), autocast(), RE.record_routing(lm.model) as rec:
@@ -854,7 +875,7 @@ def main() -> None:
     se_meta = {"alpha_init": args.se_alpha_init, "init_std": args.se_init_std if args.se_init_std is not None
                else lm.model.config.initializer_range, "init_seed": args.seed,
                "base_model": lm.info["model_id"], "base_revision": lm.info["requested_revision"]} if se_method else None
-    re_meta = {"copy": args.re_copy, "target_rate": args.re_target_rate,
+    re_meta = {"copy": args.re_copy, "expert_init": init_info or "copy", "target_rate": args.re_target_rate,
                "row_noise_std": args.re_row_noise, "calibration": calib, "init_seed": args.seed,
                "base_model": lm.info["model_id"], "base_revision": lm.info["requested_revision"]} if re_method else None
 
@@ -878,7 +899,8 @@ def main() -> None:
               "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}
 
     if args.smoke:
-        res = (smoke_routed_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out, calib)
+        res = (smoke_routed_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out, calib,
+                                   init_expert)
                if re_method else
                smoke_security_expert(policy, lm.layout, train, cache, args, pad_id, device, autocast, rep, pre, out)
                if se_method else smoke(policy, train, cache, args, pad_id, device, autocast, rep, pre))
