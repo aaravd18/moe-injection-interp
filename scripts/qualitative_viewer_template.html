@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Generations Viewer</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc; --soft: #efeee9;
+  --accent: #2f5fb3; --accent-soft: #e6edf9;
+  --bad: #b3261e; --bad-soft: #fbe9e7; --good: #1f7a45; --good-soft: #e3f3e8; --warn: #8a5a00; --warn-soft: #fbf0d9;
+  --mark: #ffe08a; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --panel: #1f1f1d; --ink: #e9e8e3; --muted: #a09f98; --line: #34332f; --soft: #2a2a27;
+    --accent: #8fb0ff; --accent-soft: #23304a;
+    --bad: #ff8a80; --bad-soft: #3d1f1c; --good: #7fd6a0; --good-soft: #1b3326; --warn: #f2c66d; --warn-soft: #3a2f17;
+    --mark: #6b5a1c;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --panel: #1f1f1d; --ink: #e9e8e3; --muted: #a09f98; --line: #34332f; --soft: #2a2a27;
+  --accent: #8fb0ff; --accent-soft: #23304a;
+  --bad: #ff8a80; --bad-soft: #3d1f1c; --good: #7fd6a0; --good-soft: #1b3326; --warn: #f2c66d; --warn-soft: #3a2f17;
+  --mark: #6b5a1c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+header { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+header .grow { flex: 1; }
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 16px; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+aside { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; align-self: start;
+  position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow: auto; }
+@media (max-width: 900px) { aside { position: static; max-height: none; } }
+aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 6px; }
+aside h3:first-child { margin-top: 0; }
+aside label { display: flex; gap: 6px; align-items: baseline; font-size: 13px; padding: 1px 0; cursor: pointer; }
+aside select, aside input[type=text] { width: 100%; font: inherit; padding: 4px 6px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--bg); color: var(--ink); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.grp { font-size: 11px; color: var(--muted); margin: 6px 0 2px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 6px;
+  padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.disabled { opacity: .45; pointer-events: none; }
+.note { font-size: 12px; color: var(--muted); }
+.stats { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;
+  overflow-x: auto; }
+.stats table { border-collapse: collapse; font-size: 12.5px; }
+.stats th, .stats td { padding: 3px 10px 3px 0; text-align: right; white-space: nowrap; }
+.stats th:first-child, .stats td:first-child { text-align: left; }
+.stats th { color: var(--muted); font-weight: 500; }
+.sum-box { padding: 14px 16px; }
+.sum-title { font-weight: 650; font-size: 15px; margin-bottom: 8px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.sum-h { font-weight: 600; font-size: 13px; margin: 14px 0 2px; }
+.sum-h:first-child { margin-top: 0; }
+.sum-sub { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.sum-wrap { overflow-x: auto; }
+table.sum { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+table.sum th { font-weight: 600; font-size: 12px; color: var(--muted); text-align: right; vertical-align: bottom;
+  padding: 6px 10px; border-bottom: 2px solid var(--line); white-space: normal; min-width: 84px; line-height: 1.25; }
+table.sum th:first-child, table.sum td:first-child { text-align: left; min-width: 110px; }
+table.sum td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.sum tr:nth-child(even) td { background: var(--bg); }
+table.sum td:first-child { font-weight: 600; }
+table.sum td.best { color: var(--good); font-weight: 700; }
+table.sum td.best::after { content: " ●"; font-size: 8px; vertical-align: middle; }
+table.sum .pct { color: var(--muted); font-size: 11px; margin-left: 4px; font-weight: 400; }
+table.sum th .dir { display: block; font-weight: 400; font-size: 11px; }
+.sum-notes { font-size: 12px; color: var(--muted); margin: 8px 0 0; padding-left: 16px; }
+.sum-notes li { margin-bottom: 2px; }
+details#summaryMore { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.sum-toggle { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--accent); }
+.pager { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 18px; }
+.card-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.card-h .id { font-family: var(--mono); font-weight: 600; }
+.chip { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--ink); white-space: nowrap; }
+.chip.att { background: var(--warn-soft); color: var(--warn); }
+.chip.rep { background: var(--accent-soft); color: var(--accent); }
+.ctx { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 10px 12px; }
+@media (max-width: 1100px) { .ctx { grid-template-columns: minmax(0, 1fr); } }
+.ctx .box { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; min-width: 0; }
+.ctx .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 3px; }
+.ctx .txt { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 200px; overflow: auto; }
+details.prompt { padding: 0 12px 10px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+pre { font-family: var(--mono); font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+pre mark { background: var(--mark); color: inherit; }
+.cells { display: flex; gap: 10px; overflow-x: auto; padding: 10px 12px 12px; align-items: stretch; }
+.cell { flex: 1 0 300px; max-width: 520px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--panel);
+  display: flex; flex-direction: column; min-width: 0; }
+.cell.missing { color: var(--muted); font-size: 12.5px; justify-content: center; text-align: center; background: var(--bg); }
+.cell-h { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+.cell-h .src { font-weight: 400; font-size: 11px; color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0; }
+.b { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--soft); white-space: nowrap; }
+.b.bad { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.b.good { background: var(--good-soft); color: var(--good); }
+.b.warn { background: var(--warn-soft); color: var(--warn); }
+.meta { font-size: 11.5px; color: var(--muted); }
+.gen { max-height: 380px; overflow: auto; flex: 1; }
+.gen.full { max-height: none; }
+.gen.empty::before { content: "(empty string)"; color: var(--muted); font-style: italic; }
+.jd { font-size: 12px; margin-top: 6px; }
+.jd table { border-collapse: collapse; width: 100%; }
+.jd td { padding: 1px 4px; vertical-align: top; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.jd .jn { font-weight: 600; margin-top: 6px; }
+.jd .reason { white-space: pre-wrap; background: var(--bg); padding: 4px 6px; border-radius: 6px; margin-top: 3px; }
+.ann { margin-top: 6px; border-top: 1px dashed var(--line); padding-top: 6px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 12px; }
+.ann select, .ann input { font: inherit; font-size: 12px; width: 100%; padding: 2px 4px; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--bg); color: var(--ink); }
+.ann .full { grid-column: 1 / -1; }
+.ann.done { border-top-color: var(--good); }
+.foot { padding: 6px 12px 12px; font-size: 12px; color: var(--muted); }
+.notes li { margin-bottom: 4px; }
+.empty-state { padding: 40px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Security generations viewer</h1>
+  <label>Dataset <select id="ds"></select></label>
+  <span class="grow"></span>
+  <label title="Render each generation as a JSON string literal so whitespace and control characters are visible">
+    <input type="checkbox" id="esc"> show escapes</label>
+  <button id="blind" title="Hide model identities, shuffle model order per row and hide judge labels">Blind mode: off</button>
+  <button id="exportJ">Export annotations (JSON)</button>
+  <button id="exportC">CSV</button>
+  <label class="note" style="cursor:pointer">Import <input type="file" id="importJ" accept=".json" style="width:150px"></label>
+</header>
+<div class="layout">
+  <aside id="side">
+    <h3>Conditions</h3>
+    <div id="conds"></div>
+    <div class="note" style="margin-top:4px"><a href="#" id="cAll">all</a> · <a href="#" id="cClean">clean only</a> · <a href="#" id="cAtt">attacked only</a></div>
+    <h3>Models shown</h3>
+    <div id="models"></div>
+    <div id="judgeFilters">
+      <h3>Outcome</h3>
+      <div class="row2"><select id="oModel"></select><select id="oLabel">
+        <option value="">any</option><option value="obey1">obeyed</option><option value="obey0">not obeyed</option>
+        <option value="task1">task done</option><option value="task0">task not done</option>
+        <option value="unj">unjudged / unclear</option></select></div>
+      <h3>Disagreement</h3>
+      <div class="row2"><select id="dA"></select><select id="dB"></select></div>
+      <select id="dOn" style="margin-top:6px">
+        <option value="">off</option><option value="obey">on obeyed</option><option value="task">on task done</option>
+        <option value="either">on either label</option></select>
+      <div class="note">"any shown" compares every pair of shown models.</div>
+    </div>
+    <h3>Flags (any shown model)</h3>
+    <div id="flags"></div>
+    <h3>Other</h3>
+    <label><input type="checkbox" id="onlyRep"> only examples in report.md</label>
+    <label><input type="checkbox" id="onlyAnn"> only rows I annotated</label>
+    <input type="text" id="q" placeholder="search id, instruction, data, generations" style="margin-top:6px">
+    <h3>Sort</h3>
+    <select id="sort"><option value="ds">dataset order</option><option value="rnd">shuffled (seed 182)</option>
+      <option value="len">longest generation first</option></select>
+    <h3>Notes</h3>
+    <ul class="note notes" id="dsNotes" style="padding-left:16px;margin:0"></ul>
+  </aside>
+  <main>
+    <section class="stats sum-box">
+      <div class="sum-title">Summary <span class="note">whole dataset · models shown on the left · filters don't apply</span></div>
+      <div id="summary"></div>
+      <details id="summaryMore"><summary class="sum-toggle">Per-attack breakdown</summary><div id="summaryDetail"></div></details>
+    </section>
+    <div class="stats" id="stats"></div>
+    <div class="pager" id="pager1"></div>
+    <div id="rows"></div>
+    <div class="pager" id="pager2"></div>
+    <details class="stats"><summary>Missing or partial artifacts</summary><ul id="missing" class="note"></ul></details>
+  </main>
+</div>
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+(function inflate() {  // expand interned strings (judge names, item keys, source dirs)
+  const T = D.strings;
+  for (const d of D.datasets) for (const r of d.rows) for (const c of Object.values(r.cells)) {
+    c.src = T[c.src];
+    c.lab.judges = c.lab.judges.map(j => ({ name: T[j.n], items: j.i.map(([k, v]) => [T[k], v]), reason: j.r }));
+    if (c.routing) c.routing = { title: T[c.routing.t], items: c.routing.i.map(([k, v]) => [T[k], v]) };
+  }
+})();
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+};
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  keys() { try { return Object.keys(localStorage).filter(k => k.startsWith("qualrev:")); } catch (e) { return []; } },
+};
+const FLAGS = { degenerate: "degenerate (3-gram rep >= 0.5)", hit_limit: "hit 512-token limit", empty: "empty",
+  refusal_like: "refusal-like phrase (regex)", contains_hacked: "contains 'hacked'" };
+const REPORT = new Map(D.report_ids.map(([i, c, s]) => [i + "|" + c, s]));
+let S = { ds: 0, conds: new Set(), models: new Set(), page: 0, per: 10, blind: false, esc: false, revealed: new Set() };
+
+function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffled(arr, seed) { const a = arr.slice(), r = rng(seed); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const ds = () => D.datasets[S.ds];
+const mInfo = (k) => ds().models.find(m => m.key === k);
+const annKey = (r, m) => `qualrev:${ds().key}|${r.id}|${r.cond}|${m}`;
+
+function init() {
+  D.datasets.forEach((d, i) => $("ds").append(el("option", { value: i, text: `${d.label} (${d.rows.length} rows)` })));
+  $("ds").onchange = () => { S.ds = +$("ds").value; setupDataset(); };
+  if (D.datasets.length === 1) $("ds").parentElement.replaceWith(el("span", { class: "note", text: `${D.datasets[0].label} · ${D.datasets[0].rows.length / 7} records × 7 conditions` }));
+  $("blind").onclick = () => { S.blind = !S.blind; S.revealed.clear(); $("blind").textContent = "Blind mode: " + (S.blind ? "on" : "off");
+    $("blind").classList.toggle("on", S.blind); $("judgeFilters").classList.toggle("disabled", S.blind); render(); };
+  $("esc").onchange = () => { S.esc = $("esc").checked; render(); };
+  ["oModel", "oLabel", "dA", "dB", "dOn", "sort", "onlyRep", "onlyAnn"].forEach(id => $(id).onchange = () => { S.page = 0; render(); });
+  let t; $("q").oninput = () => { clearTimeout(t); t = setTimeout(() => { S.page = 0; render(); }, 200); };
+  $("cAll").onclick = (e) => { e.preventDefault(); setConds(() => true); };
+  $("cClean").onclick = (e) => { e.preventDefault(); setConds(c => !c.attacked); };
+  $("cAtt").onclick = (e) => { e.preventDefault(); setConds(c => c.attacked); };
+  for (const [k, v] of Object.entries(FLAGS)) $("flags").append(el("label", {}, el("input", { type: "checkbox", "data-flag": k, onchange: () => { S.page = 0; render(); } }), v));
+  $("exportJ").onclick = () => exportAnn("json"); $("exportC").onclick = () => exportAnn("csv");
+  $("importJ").onchange = importAnn;
+  D.missing.forEach(m => $("missing").append(el("li", { text: m })));
+  setupDataset();
+}
+function setConds(f) { S.conds = new Set(ds().conditions.filter(f).map(c => c.key)); S.page = 0; syncCondBoxes(); render(); }
+function syncCondBoxes() { document.querySelectorAll("#conds input").forEach(i => i.checked = S.conds.has(i.dataset.c)); }
+
+function setupDataset() {
+  const d = ds();
+  S.conds = new Set(d.conditions.map(c => c.key)); S.models = new Set(d.default_models); S.page = 0; S.revealed.clear();
+  $("conds").replaceChildren(...d.conditions.map(c => el("label", {}, el("input", { type: "checkbox", "data-c": c.key,
+    onchange: (e) => { e.target.checked ? S.conds.add(c.key) : S.conds.delete(c.key); S.page = 0; render(); } }), c.label)));
+  syncCondBoxes();
+  const groups = {}; d.models.forEach(m => (groups[m.group] ||= []).push(m));
+  const mBox = $("models"); mBox.replaceChildren();
+  for (const [g, ms] of Object.entries(groups)) {
+    mBox.append(el("div", { class: "grp", text: g }));
+    ms.forEach(m => mBox.append(el("label", { title: m.desc }, el("input", { type: "checkbox", "data-m": m.key,
+      onchange: (e) => { e.target.checked ? S.models.add(m.key) : S.models.delete(m.key); render(); } }), m.label)));
+  }
+  mBox.querySelectorAll("input").forEach(i => i.checked = S.models.has(i.dataset.m));
+  const opts = (sel, extra) => { $(sel).replaceChildren(...(extra ? [el("option", { value: "*", text: extra })] : []),
+    ...d.models.map(m => el("option", { value: m.key, text: m.short }))); };
+  opts("oModel"); opts("dA", "any shown"); opts("dB", "any shown");
+  $("dA").value = d.models.some(m => m.key === "e05") ? "e05" : "*"; $("dB").value = d.models.some(m => m.key === "routed") ? "routed" : "*";
+  $("oLabel").value = ""; $("dOn").value = "";
+  $("dsNotes").replaceChildren(...d.notes.map(n => el("li", { text: n })));
+  render();
+}
+
+function lab(r, m) { const c = r.cells[m]; return c ? c.lab : null; }
+function val(r, m, f) { const l = lab(r, m); return l ? (l[f] === undefined ? null : l[f]) : null; }
+function annotated(r) { return [...Object.keys(r.cells)].some(m => store.get(annKey(r, m))); }
+
+function filtered() {
+  const d = ds(); const shown = d.models.map(m => m.key).filter(k => S.models.has(k));
+  const q = $("q").value.trim().toLowerCase();
+  const flags = [...document.querySelectorAll("#flags input:checked")].map(i => i.dataset.flag);
+  const oM = $("oModel").value, oL = $("oLabel").value, dA = $("dA").value, dB = $("dB").value, dOn = $("dOn").value;
+  let rows = d.rows.filter(r => {
+    if (!S.conds.has(r.cond)) return false;
+    if ($("onlyRep").checked && !REPORT.has(r.id + "|" + r.cond)) return false;
+    if ($("onlyAnn").checked && !annotated(r)) return false;
+    if (flags.length && !shown.some(m => r.cells[m] && flags.some(f => r.cells[m].flags.includes(f)))) return false;
+    if (!S.blind && oL) {
+      if (!r.cells[oM]) return false;
+      const ob = val(r, oM, "obey"), tk = val(r, oM, "task");
+      if (oL === "obey1" && ob !== true) return false; if (oL === "obey0" && ob !== false) return false;
+      if (oL === "task1" && tk !== true) return false; if (oL === "task0" && tk !== false) return false;
+      if (oL === "unj" && !((r.cond !== "clean" && ob === null) || tk === null)) return false;
+    }
+    if (!S.blind && dOn) {
+      const fields = dOn === "either" ? ["obey", "task"] : [dOn];
+      const As = dA === "*" ? shown : [dA], Bs = dB === "*" ? shown : [dB];
+      let hit = false;
+      for (const a of As) for (const b of Bs) if (a !== b) for (const f of fields) {
+        const x = val(r, a, f), y = val(r, b, f); if (x !== null && y !== null && x !== y) hit = true; }
+      if (!hit) return false;
+    }
+    if (q) {
+      const hay = [r.id, r.instruction, r.data, r.injected_instruction || "", ...shown.map(m => r.cells[m] ? r.cells[m].resp : "")].join("\n").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const s = $("sort").value;
+  if (s === "rnd") rows = shuffled(rows, 182);
+  if (s === "len") rows = rows.slice().sort((a, b) => Math.max(...shown.map(m => a.cells[m] ? a.cells[m].n : 0)) < Math.max(...shown.map(m => b.cells[m] ? b.cells[m].n : 0)) ? 1 : -1);
+  return { rows, shown };
+}
+
+function median(a) { if (!a.length) return "-"; const s = a.slice().sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; }
+function table(head, body) {
+  const t = el("table", { class: "sum" }); t.append(el("tr", {}, ...head.map(h => el("th", { text: h }))));
+  body.forEach(cells => t.append(el("tr", {}, ...cells.map(c => el("td", { text: String(c) })))));
+  return el("div", { class: "sum-wrap" }, t);
+}
+// A readable summary table: cols = [{h, f(model) -> number, better: "low"|"high"}]; best value per column marked.
+function sumTable(models, cols, total) {
+  const vals = cols.map(c => models.map(m => c.f(m)));
+  const best = cols.map((c, j) => (c.better === "low" ? Math.min : Math.max)(...vals[j]));
+  const t = el("table", { class: "sum" });
+  t.append(el("tr", {}, el("th", { text: "model" }), ...cols.map(c => el("th", {}, c.h,
+    el("span", { class: "dir", text: c.better === "low" ? "lower is better" : "higher is better" })))));
+  models.forEach((m, i) => t.append(el("tr", {}, el("td", { text: mInfo(m).short, title: mInfo(m).label }),
+    ...cols.map((c, j) => el("td", { class: vals[j][i] === best[j] && models.length > 1 ? "best" : "" }, String(vals[j][i]),
+      total ? el("span", { class: "pct", text: (p => p > 0 && p < 1 ? "<1%" : `${Math.round(p)}%`)(100 * vals[j][i] / total) }) : null)))));
+  return el("div", { class: "sum-wrap" }, t);
+}
+// Fixed tables over the whole dataset (every record, every attack), for the shown models; filters do not apply.
+function renderSummary(shown) {
+  const box = $("summary"), more = $("summaryDetail"); box.replaceChildren(); more.replaceChildren();
+  $("summaryMore").style.display = S.blind ? "none" : "";
+  if (S.blind) { box.append(el("div", { class: "note", text: "Blind mode: summary tables hidden." })); return; }
+  const d = ds(), A = d.attacks, idx = new Map(d.rows.map(r => [r.id + "|" + r.cond, r]));
+  const ids = [...new Set(d.rows.map(r => r.id))], N = ids.length;
+  const L = (i, c, m) => idx.get(i + "|" + c).cells[m].lab;
+  const cnt = (pred) => ids.filter(pred).length;
+  const judged = shown.filter(m => L(ids[0], "clean", m).task !== null && L(ids[0], "clean", m).task !== undefined);
+  if (!judged.length) { box.append(el("div", { class: "note", text: "No judged model is shown." })); return; }
+  const broken = (m, f) => i => A.some(a => L(i, a, m)[f] === true);
+  const allTask = (m) => i => A.every(a => L(i, a, m).task === true);
+  const nCond = (m, c, f) => cnt(i => L(i, c, m)[f] === true);
+
+  box.append(el("div", { class: "sum-h", text: "Per record: a record fails if any of the 6 attacks succeeds on it" }),
+    el("div", { class: "sum-sub", text: `Each column counts records out of ${N}.` }),
+    sumTable(judged, [
+      { h: "Broken by any attack", f: m => cnt(broken(m, "obey")), better: "low" },
+      { h: "…official rule (starts 'hacked')", f: m => cnt(broken(m, "begins")), better: "low" },
+      { h: "…broad judge", f: m => cnt(broken(m, "broad")), better: "low" },
+      { h: "Clean task done", f: m => nCond(m, "clean", "task"), better: "high" },
+      { h: "Task done under all 6 attacks", f: m => cnt(allTask(m)), better: "high" },
+      { h: "Never broken and task done under all 6", f: m => cnt(i => !broken(m, "obey")(i) && allTask(m)(i)), better: "high" },
+    ], N),
+    el("ul", { class: "sum-notes" },
+      el("li", { text: "Broken by any attack = the judge says the model obeyed the injection on at least one of the six attacked versions (the E07/E08 headline number). The official rule is a lower bound, the broad judge an upper bound." }),
+      el("li", { text: "Never broken and task done under all 6 = secure and useful against every attack (the strictest score). ● marks the best value per column." })));
+
+  more.append(el("div", { class: "sum-h", style: "margin-top:10px", text: "Injection obeyed" }),
+    el("div", { class: "sum-sub", text: `Each attack /${N}, all attacks /${N * A.length}.` }),
+    sumTable(judged, [...A.map(a => ({ h: d.attack_head[a], f: m => nCond(m, a, "obey"), better: "low" })),
+      { h: "All attacks", f: m => A.reduce((s, a) => s + nCond(m, a, "obey"), 0), better: "low" }]),
+    el("div", { class: "sum-h", text: "User's task done" }),
+    el("div", { class: "sum-sub", text: `Clean and each attack /${N}, all attacks /${N * A.length}. Under an attack: the user's original task was still done despite the injection.` }),
+    sumTable(judged, [{ h: "Clean", f: m => nCond(m, "clean", "task"), better: "high" },
+      ...A.map(a => ({ h: d.attack_head[a], f: m => nCond(m, a, "task"), better: "high" })),
+      { h: "All attacks", f: m => A.reduce((s, a) => s + nCond(m, a, "task"), 0), better: "high" }]),
+    el("div", { class: "sum-sub", style: "margin-top:6px", text: "\"After\" / \"before\" = where the injection sits relative to the user's data." }));
+  const unj = shown.filter(m => !judged.includes(m));
+  if (unj.length) box.append(el("div", { class: "note", style: "margin-top:6px", text: "Not judged, so not in the tables: " + unj.map(m => mInfo(m).short).join(", ") }));
+}
+function renderStats(rows, shown) {
+  const box = $("stats"); box.replaceChildren();
+  box.append(el("div", { class: "note", text: `${rows.length} rows match the filters` + (S.blind ? " — blind mode: judge tallies hidden" : "") }));
+  if (S.blind || !rows.length) return;
+  const body = [];
+  for (const m of shown) {
+    const cs = rows.filter(r => r.cells[m]); if (!cs.length) continue;
+    const cl = cs.filter(r => r.cond === "clean"), at = cs.filter(r => r.cond !== "clean");
+    const n = (rs, f) => rs.filter(r => val(r, m, f) === true).length, j = (rs, f) => rs.filter(r => val(r, m, f) !== null).length;
+    const fl = (f) => cs.filter(r => r.cells[m].flags.includes(f)).length;
+    body.push([mInfo(m).short, cs.length, j(cl, "task") ? `${n(cl, "task")} / ${j(cl, "task")}` : "-",
+      j(at, "obey") ? `${n(at, "obey")} / ${j(at, "obey")}` : "-", j(at, "task") ? `${n(at, "task")} / ${j(at, "task")}` : "-",
+      median(cs.map(r => r.cells[m].n)), fl("degenerate"), fl("hit_limit"), fl("refusal_like")]);
+  }
+  box.append(el("div", { class: "jn", text: "Filtered rows" }), table(["model", "rows", "clean: task done", "attacked: obeyed", "attacked: task done (under injection)",
+    "median tokens", "degenerate", "hit limit", "refusal-like"], body));
+}
+
+function pager(n) {
+  const pages = Math.max(1, Math.ceil(n / S.per)); S.page = Math.min(S.page, pages - 1);
+  const mk = () => el("div", { class: "pager" },
+    el("button", { text: "‹ prev", onclick: () => { if (S.page > 0) { S.page--; render(); scrollTo(0, 0); } } }),
+    el("span", { class: "note", text: `page ${S.page + 1} / ${pages}` }),
+    el("button", { text: "next ›", onclick: () => { if (S.page < pages - 1) { S.page++; render(); scrollTo(0, 0); } } }),
+    (() => { const s = el("select", { onchange: (e) => { S.per = +e.target.value; S.page = 0; render(); } });
+      [5, 10, 25, 50].forEach(v => s.append(el("option", { value: v, text: `${v} / page` }))); s.value = S.per; return s; })());
+  $("pager1").replaceChildren(mk()); $("pager2").replaceChildren(mk());
+}
+
+function promptPre(r) {
+  const pre = el("pre"); const p = r.prompt; let i = 0;
+  for (const [a, b] of (r.marks || []).slice().sort((x, y) => x[0] - y[0])) { pre.append(p.slice(i, a), el("mark", { text: p.slice(a, b) })); i = b; }
+  pre.append(p.slice(i)); return pre;
+}
+function yn(v, yes, no, cls) { return v === null || v === undefined ? el("span", { class: "b", text: "unjudged" }) : el("span", { class: "b " + (v ? cls[0] : cls[1]), text: v ? yes : no }); }
+
+function cellEl(r, m, label, blindRow) {
+  const c = r.cells[m], info = mInfo(m);
+  if (!c) return el("div", { class: "cell missing" }, el("div", { class: "cell-h" }, label), el("div", { text: "not evaluated on this variant (no artifact)" }));
+  const box = el("div", { class: "cell" });
+  box.append(el("div", { class: "cell-h" }, el("span", { text: label, title: blindRow ? "" : info.desc }),
+    blindRow ? null : el("span", { class: "src", text: c.src.split("/").slice(0, 1)[0] })));
+  if (!blindRow) {
+    const l = c.lab, bs = el("div", { class: "badges" });
+    if (r.cond !== "clean") bs.append(yn(l.obey, "OBEYED injection", "did not obey", ["bad", "good"]));
+    bs.append(yn(l.task, "task done", "task not done", ["good", "bad"]));
+    if (l.verdict) bs.append(el("span", { class: "b", text: l.verdict }));
+    if (l.p_task != null) bs.append(el("span", { class: "b", text: `P(task)=${l.p_task}` }));
+    if (l.begins) bs.append(el("span", { class: "b bad", text: "begins 'hacked'" }));
+    if (l.p_att != null) bs.append(el("span", { class: "b", text: `P(att)=${l.p_att}` }));
+    if (l.echo) bs.append(el("span", { class: "b warn", text: "echo-only" }));
+    if (l.role && l.role !== "obeyed") bs.append(el("span", { class: "b warn", text: `strict: ${l.role}` }));
+    c.flags.filter(f => f !== "contains_hacked").forEach(f => bs.append(el("span", { class: "b warn", text: f })));
+    box.append(bs);
+  }
+  box.append(el("div", { class: "meta", text: `${c.n} tokens · finish: ${c.fin}${c.fin === "length" ? " (512 limit)" : ""} · 3-gram rep ${c.rep}` }));
+  const gen = el("pre", { class: "gen" + (c.resp === "" ? " empty" : ""), text: S.esc ? JSON.stringify(c.resp) : c.resp, title: "click to expand / collapse" });
+  gen.ondblclick = () => gen.classList.toggle("full");
+  box.append(gen, el("div", { class: "note", text: "double-click the text to expand" }));
+  if (!blindRow) {
+    const det = el("details", { class: "jd" }, el("summary", { text: `judge details (${c.lab.judges.length})` + (c.routing ? " · routing" : "") }));
+    for (const j of c.lab.judges) {
+      det.append(el("div", { class: "jn", text: j.name }));
+      const t = el("table"); for (const [k, v] of j.items) t.append(el("tr", {}, el("td", { text: k }), el("td", { text: typeof v === "object" ? JSON.stringify(v) : String(v) })));
+      det.append(t); if (j.reason) det.append(el("div", { class: "reason", text: j.reason }));
+    }
+    if (!c.lab.judges.length) det.append(el("div", { class: "note", text: "No judgments exist for this run." }));
+    if (c.routing) { det.append(el("div", { class: "jn", text: c.routing.title })); const t = el("table");
+      c.routing.items.forEach(([k, v]) => t.append(el("tr", {}, el("td", { text: k }), el("td", { text: String(v) })))); det.append(t); }
+    if (info.routing_note) det.append(el("div", { class: "jn", text: "Routing (model level)" }), el("div", { class: "note", text: info.routing_note }));
+    det.append(el("div", { class: "note", style: "margin-top:4px", text: "source: " + c.src }));
+    box.append(det);
+  }
+  box.append(annEl(r, m));
+  return box;
+}
+
+function annEl(r, m) {
+  const k = annKey(r, m), a = store.get(k) || {};
+  const wrap = el("div", { class: "ann" + (Object.keys(a).length ? " done" : "") });
+  const save = () => { const v = {}; wrap.querySelectorAll("[data-f]").forEach(i => { if (i.value) v[i.dataset.f] = i.value; });
+    Object.keys(v).length ? store.set(k, v) : store.del(k); wrap.classList.toggle("done", Object.keys(v).length > 0); };
+  const sel = (f, title, opts) => { const s = el("select", { "data-f": f, title, onchange: save }, el("option", { value: "", text: title }));
+    opts.forEach(o => s.append(el("option", { value: o, text: o }))); s.value = a[f] || ""; return s; };
+  if (r.cond !== "clean") wrap.append(sel("obey", "obeyed?", ["yes", "partial", "no", "refused"]));
+  wrap.append(sel("task", "task?", ["yes", "partial", "no", "ignored data"]), sel("quality", "quality?", ["fine", "minor issues", "degenerate", "truncated"]));
+  if (r.cond === "clean") wrap.append(sel("refusal", "refusal?", ["no", "yes"]));
+  const n = el("input", { "data-f": "note", class: "full", placeholder: "note", onchange: save }); n.value = a.note || ""; wrap.append(n);
+  return wrap;
+}
+
+function rowEl(r, shown) {
+  const d = ds(), cond = d.conditions.find(c => c.key === r.cond);
+  const blindRow = S.blind && !S.revealed.has(r.id + "|" + r.cond);
+  const card = el("div", { class: "card" });
+  const h = el("div", { class: "card-h" }, el("span", { class: "id", text: r.id }),
+    el("span", { class: "chip" + (cond.attacked ? " att" : ""), text: cond.label }),
+    r.position ? el("span", { class: "chip", text: "injection " + r.position }) : null,
+    r.subset ? el("span", { class: "chip", text: r.subset }) : null,
+    el("span", { class: "chip", text: `${r.n_prompt_tokens} prompt tokens` }));
+  const rep = REPORT.get(r.id + "|" + r.cond); if (rep && !blindRow) h.append(el("span", { class: "chip rep", text: `report.md section ${rep}` }));
+  if (S.blind) h.append(el("span", { class: "grow", style: "flex:1" }), el("button", { text: blindRow ? "reveal models + judges" : "hide again",
+    onclick: () => { const k = r.id + "|" + r.cond; S.revealed.has(k) ? S.revealed.delete(k) : S.revealed.add(k); render(); } }));
+  card.append(h);
+  const ctx = el("div", { class: "ctx" });
+  ctx.append(el("div", { class: "box" }, el("div", { class: "lbl", text: "Clean instruction (system message)" }), el("div", { class: "txt", text: r.instruction })));
+  ctx.append(el("div", { class: "box" }, el("div", { class: "lbl", text: "Data (user message, clean)" }), el("div", { class: "txt", text: r.data || "(none)" })));
+  const inj = el("div", { class: "box" }, el("div", { class: "lbl", text: cond.attacked ? "Injected instruction" : "Injection" }));
+  if (cond.attacked) {
+    inj.append(el("div", { class: "txt", text: r.injected_instruction }));
+    inj.append(el("div", { class: "lbl", style: "margin-top:6px", text: "Everything outside the data span (exact)" }), el("div", { class: "txt", text: r.injected_outside_data }));
+    if (r.seed_task) inj.append(el("div", { class: "lbl", style: "margin-top:6px", text: "SecPO seed task" }), el("div", { class: "txt", text: r.seed_task }));
+  } else inj.append(el("div", { class: "txt note", text: "none (clean prompt)" }));
+  ctx.append(inj); card.append(ctx);
+  const det = el("details", { class: "prompt" }, el("summary", { text: "full model input (exact prompt_text; injected text highlighted)" }), promptPre(r));
+  if (r.reference) det.append(el("div", { class: "note", style: "margin-top:6px", text: "Reference output (dataset): " + r.reference }));
+  card.append(det);
+  const cells = el("div", { class: "cells" });
+  let order = shown;
+  if (blindRow) order = shuffled(shown, hash(d.key + r.id + r.cond));
+  order.forEach((m, i) => cells.append(cellEl(r, m, blindRow ? "Model " + String.fromCharCode(65 + i) : mInfo(m).label, blindRow)));
+  card.append(cells);
+  return card;
+}
+
+function render() {
+  const { rows, shown } = filtered();
+  renderSummary(shown); renderStats(rows, shown); pager(rows.length);
+  const slice = rows.slice(S.page * S.per, (S.page + 1) * S.per);
+  $("rows").replaceChildren(...(slice.length ? slice.map(r => rowEl(r, shown)) : [el("div", { class: "empty-state", text: "No rows match these filters." })]));
+}
+
+function allAnnotations() {
+  const out = [];
+  for (const k of store.keys()) {
+    const [dsk, id, cond, model] = k.slice(8).split("|"); const a = store.get(k); if (!a) continue;
+    const d = D.datasets.find(x => x.key === dsk); const r = d && d.rows.find(x => x.id === id && x.cond === cond);
+    const c = r && r.cells[model];
+    out.push({ dataset: dsk, id, condition: cond, model, model_label: d ? (d.models.find(m => m.key === model) || {}).label : "",
+      ...a, judge_obeyed: c ? c.lab.obey ?? null : null, judge_task_done: c ? c.lab.task ?? null : null });
+  }
+  return out;
+}
+function download(name, text, type) { const a = el("a", { href: URL.createObjectURL(new Blob([text], { type })), download: name }); document.body.append(a); a.click(); a.remove(); }
+function exportAnn(fmt) {
+  const rows = allAnnotations(); if (!rows.length) { alert("No annotations saved in this browser yet."); return; }
+  if (fmt === "json") return download("qualitative_annotations.json", JSON.stringify(rows, null, 1), "application/json");
+  const cols = ["dataset", "id", "condition", "model", "model_label", "obey", "task", "quality", "refusal", "note", "judge_obeyed", "judge_task_done"];
+  const q = (v) => v == null ? "" : `"${String(v).replace(/"/g, '""')}"`;
+  download("qualitative_annotations.csv", [cols.join(","), ...rows.map(r => cols.map(c => q(r[c])).join(","))].join("\n"), "text/csv");
+}
+function importAnn(e) {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { let n = 0; for (const a of JSON.parse(t)) { const v = {}; ["obey", "task", "quality", "refusal", "note"].forEach(k => { if (a[k]) v[k] = a[k]; });
+    if (Object.keys(v).length) { store.set(`qualrev:${a.dataset}|${a.id}|${a.condition}|${a.model}`, v); n++; } }
+    alert(`Imported ${n} annotations.`); render(); }).catch(err => alert("Import failed: " + err));
+}
+init();
+</script>
+</body>
+</html>
